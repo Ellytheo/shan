@@ -44,7 +44,7 @@ const HeroSection = styled.section`
   content: "";
   position: absolute;
   inset: 0;
-  background-image: url("https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&w=1920&q=80");
+  background-image: url("../images/heroimgg.jpeg");
   background-size: cover;
   background-position: center;
   filter: brightness(1) contrast(1) saturate(1.05);
