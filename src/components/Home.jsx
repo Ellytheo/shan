@@ -7,6 +7,7 @@ import dis2 from '../images/shan3.jpg';
 import dis3 from '../images/shan2.jpg';
 import dis4 from '../images/shan4.jpg';
 import dis5 from '../images/logo.png';
+import heroimgg from '../images/heroimgg.jpeg';
 
 const zoom = keyframes`
   0%, 100% {
@@ -44,7 +45,7 @@ const HeroSection = styled.section`
   content: "";
   position: absolute;
   inset: 0;
-  background-image: url("../images/heroimgg.jpeg");
+  background-image: url(${heroimgg});
   background-size: cover;
   background-position: center;
   filter: brightness(1) contrast(1) saturate(1.05);
@@ -73,19 +74,36 @@ const HeroContent = styled.div`
 
 const HeroParagraph = styled.p`
   font-family: 'Playfair Display', serif;
-  font-weight: 400;
-  font-size: 1.3rem;
-  color: rgb(226, 57, 57);
+  font-weight: 600;
+  font-size: 1.45rem;
+  color: #FFFFFF;
   line-height: 1.85;
-  max-width: 650px;
+  max-width: 700px;
   margin: 0 auto 20px;
+  letter-spacing: 0.03em;
+  
+  /* Premium glow text shadow using theme colors (accent/primary) */
+  text-shadow: 
+    0 0 8px rgba(245, 130, 32, 0.85),
+    0 0 15px rgba(15, 143, 70, 0.6),
+    0 2px 4px rgba(0, 0, 0, 0.5);
+
+  transition: all 0.3s ease;
+
+  &:hover {
+    text-shadow: 
+      0 0 12px rgba(245, 130, 32, 0.95),
+      0 0 22px rgba(15, 143, 70, 0.8),
+      0 2px 6px rgba(0, 0, 0, 0.6);
+    transform: translateY(-1px) scale(1.01);
+  }
 
   @media (max-width: 768px) {
-    font-size: 0.9rem;
+    font-size: 1.15rem;
   }
 
   @media (max-width: 480px) {
-    font-size: 0.85rem;
+    font-size: 1.05rem;
   }
 `;
 
@@ -219,7 +237,7 @@ const AnimatedImage = styled.img`
   transform: ${props => 
     props.$isInView 
       ? 'translateX(0)' 
-      : (props.$direction === 'left' ? 'translateX(-100%)' : 'translateX(100%)')
+      : (props.$direction === 'left' ? 'translateX(100%)' : 'translateX(-100%)')
   };
   opacity: ${props => props.$isInView ? 1 : 0};
   
