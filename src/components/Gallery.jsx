@@ -38,16 +38,16 @@ const Gallery = () => {
       id="gallery"
       className="gallery-container"
       style={{
-        padding: "40px 5vw", // Responsive padding
+        padding: "35px 4vw", // Responsive padding
         maxWidth: "1500px",
         margin: "0 auto",
         borderRadius: "15px",
-        boxShadow: "0px 10px 25px rgba(0, 0, 0, 0.59)",
+        boxShadow: "0px 10px 25px rgba(0, 0, 0, 0.38)",
       }}
     >
       <h2
         style={{
-          fontFamily: "Kaushan Script, cursive",
+          fontFamily: "'Playfair Display', serif",
           fontSize: "clamp(1.5rem, 2.5vw, 2.5rem)",
           textAlign: "center",
           padding: "15px",

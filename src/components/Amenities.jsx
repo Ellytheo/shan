@@ -25,7 +25,7 @@ const Amenities = () => {
           <div className="text-center mb-5">
             <h2
               className="fw-bold mb-4"
-              style={{ color:"#0F8F46", fontFamily: "Playfair Display, serif", fontSize: "2.25rem" ,boxShadow: "0px 10px 25px rgba(0, 0, 0, 0.59)",padding:"8px"}}
+              style={{ color:"#0F8F46", fontFamily: "Playfair Display, serif", fontSize: "clamp(1.75rem, 5vw, 2.25rem)" ,boxShadow: "0px 10px 25px rgba(0, 0, 0, 0.41)",padding:"8px"}}
             >
               Premium Amenities
             </h2>
@@ -112,7 +112,7 @@ const Amenities = () => {
           <div className="text-center mb-2 mt-3">
             <h2
               className="fw-bold mb-2"
-              style={{ color:"#0F8F46", fontFamily: "Playfair Display, serif", fontSize: "3rem" }}
+              style={{ color:"#0F8F46", fontFamily: "Playfair Display, serif", fontSize: "clamp(1.8rem, 6vw, 3rem)" }}
             >
               Guest Experiences
             </h2>

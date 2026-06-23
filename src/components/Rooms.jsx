@@ -1,12 +1,11 @@
 import { useState, useRef } from 'react';
 import { Modal } from 'antd';
-import { Swiper, SwiperSlide } from 'swiper/react';
-import { Pagination, Navigation, Autoplay } from 'swiper/modules';
 import { motion, AnimatePresence, useInView } from 'framer-motion';
-import 'swiper/css';
-import 'swiper/css/pagination';
-import 'swiper/css/navigation';
 import 'bootstrap-icons/font/bootstrap-icons.css';
+import pic5 from '../images/pic5.jpg';
+import pic15 from '../images/pic15.jpg';
+import room1 from '../images/room1.jpg';
+import room2 from '../images/room2.jpg';
 
 /* ─────────────────────────── DATA ─────────────────────────── */
 
@@ -18,8 +17,7 @@ const ROOMS = [
     startingPrice: 4000,
     description:
       'A well-appointed retreat offering modern comforts and elegant simplicity — the ideal base for both leisure and business.',
-    image:
-      'https://images.unsplash.com/photo-1631049307264-da0ec9d70304?w=900&q=80',
+    image: pic5,
     amenities: [
       { icon: 'bi-thermometer-snow', label: 'Air Conditioning' },
       { icon: 'bi-door-closed', label: 'Private Bathroom' },
@@ -40,8 +38,7 @@ const ROOMS = [
     startingPrice: 5200,
     description:
       'Elevated living with a private balcony and resort panoramas. Perfect for those who seek a little more indulgence.',
-    image:
-      'https://images.unsplash.com/photo-1590490360182-c33d57733427?w=900&q=80',
+    image: pic15,
     amenities: [
       { icon: 'bi-door-open', label: 'Balcony' },
       { icon: 'bi-thermometer-snow', label: 'Air Conditioning' },
@@ -62,8 +59,7 @@ const ROOMS = [
     startingPrice: 6000,
     description:
       'Spacious twin-bed luxury with smart amenities — crafted for companions, colleagues, or families seeking shared comfort.',
-    image:
-      'https://images.unsplash.com/photo-1566665797739-1674de7a421a?w=900&q=80',
+    image: room1,
     amenities: [
       { icon: 'bi-people', label: 'Twin Beds' },
       { icon: 'bi-display', label: 'Smart TV' },
@@ -84,8 +80,7 @@ const ROOMS = [
     startingPrice: 6200,
     description:
       'An exceptional sanctuary featuring luxury bedding, a premium mini bar, and an array of curated amenities for the discerning traveller.',
-    image:
-      'https://images.unsplash.com/photo-1578683010236-d716f9a3f461?w=900&q=80',
+    image: room2,
     amenities: [
       { icon: 'bi-stars', label: 'Luxury Bedding' },
       { icon: 'bi-cup-straw', label: 'Mini Bar' },
@@ -136,100 +131,14 @@ const scaleIn = {
 
 const AvailabilityBadge = ({ count }) => (
   <span style={styles.badge}>
-    <i className="bi bi-check-circle-fill" style={{ marginRight: 5, color: '#D4AF37' }} />
+    <i className="bi bi-check-circle-fill" style={{ marginRight: 5, color: '#f80808' }} />
     {count} {count === 1 ? 'Room' : 'Rooms'} Available
   </span>
 );
 
-/* ─────────────────────────── AMENITY ICON CHIP ─────────────────────────── */
+/* ─────────────────────────── ROOM CARD ─────────────────────────── */
 
-const AmenityChip = ({ icon, label }) => (
-  <div style={styles.amenityChip}>
-    <i className={`bi ${icon}`} style={{ color: '#D4AF37', fontSize: '1rem', flexShrink: 0 }} />
-    <span style={{ fontSize: '0.82rem', color: '#CBD5E0' }}>{label}</span>
-  </div>
-);
-
-/* ─────────────────────────── PRICING ROW ─────────────────────────── */
-
-const PricingRow = ({ plan, price }) => (
-  <div style={styles.pricingRow}>
-    <span style={styles.pricingLabel}>{PLAN_LABELS[plan]}</span>
-    <span style={styles.pricingAmount}>
-      KES {price.toLocaleString()}
-    </span>
-  </div>
-);
-
-/* ─────────────────────────── GLASSMORPHISM PRICING CARD ─────────────────────────── */
-
-const GlassPricingCard = ({ room, index }) => {
-  const ref = useRef(null);
-  const inView = useInView(ref, { once: true, margin: '-80px' });
-
-  return (
-    <motion.div
-      ref={ref}
-      variants={fadeUp}
-      custom={index}
-      initial="hidden"
-      animate={inView ? 'visible' : 'hidden'}
-      style={styles.glassPricingCard}
-    >
-      <div style={{ position: 'relative', overflow: 'hidden', borderRadius: '16px 16px 0 0', height: 200 }}>
-        <img
-          src={room.image}
-          alt={room.name}
-          style={{
-            width: '100%',
-            height: '100%',
-            objectFit: 'cover',
-            display: 'block',
-            transition: 'transform 0.6s ease',
-          }}
-        />
-        <div style={styles.imgOverlay} />
-        <div style={{ position: 'absolute', top: 12, left: 12 }}>
-          <AvailabilityBadge count={room.available} />
-        </div>
-        <div style={{ position: 'absolute', bottom: 14, left: 14 }}>
-          <span style={styles.roomNameOverlay}>{room.name}</span>
-        </div>
-      </div>
-
-      <div style={{ padding: '20px 24px 24px' }}>
-        {/* Pricing rows */}
-        <div style={{ marginBottom: 16 }}>
-          {Object.entries(room.pricing).map(([plan, price]) => (
-            <PricingRow key={plan} plan={plan} price={price} />
-          ))}
-        </div>
-
-        {/* Amenities */}
-        <div style={styles.amenityGrid}>
-          {room.amenities.map((a, i) => (
-            <AmenityChip key={i} icon={a.icon} label={a.label} />
-          ))}
-        </div>
-
-        {/* Book Now */}
-        <motion.button
-          whileHover={{ scale: 1.03, boxShadow: '0 8px 28px rgba(212,175,55,0.45)' }}
-          whileTap={{ scale: 0.97 }}
-          style={styles.goldButton}
-          onClick={() => document.getElementById('booking')?.scrollIntoView({ behavior: 'smooth' })}
-          aria-label={`Book ${room.name}`}
-        >
-          Book Now
-        </motion.button>
-      </div>
-    </motion.div>
-  );
-};
-
-/* ─────────────────────────── SWIPER ROOM CARD ─────────────────────────── */
-
-const SwiperRoomCard = ({ room, onViewDetails }) => (
+const RoomCard = ({ room, onViewDetails }) => (
   <motion.div
     style={styles.swiperCard}
     whileHover={{ y: -8, boxShadow: '0 32px 60px rgba(0,0,0,0.45), 0 0 0 1px rgba(212,175,55,0.25)' }}
@@ -266,7 +175,7 @@ const SwiperRoomCard = ({ room, onViewDetails }) => (
       </div>
 
       <motion.button
-        whileHover={{ scale: 1.03, boxShadow: '0 8px 24px rgba(212,175,55,0.4)' }}
+        whileHover={{ scale: 1.03, boxShadow: '0 8px 24px rgba(150, 140, 122, 0.38)' }}
         whileTap={{ scale: 0.97 }}
         style={styles.viewDetailsBtn}
         onClick={() => onViewDetails(room)}
@@ -308,7 +217,7 @@ const RoomModal = ({ room, visible, onClose }) => {
             initial="hidden"
             animate="visible"
             exit="exit"
-            style={{ borderRadius: 24, overflow: 'hidden', background: 'linear-gradient(160deg, #0F2744 0%, #183B63 100%)' }}
+            style={{ borderRadius: 24, overflow: 'hidden', background: 'linear-gradient(160deg, #FFF1DD 0%, #FAD7A0 100%)' }}
           >
             {/* Hero Image */}
             <div style={{ position: 'relative', height: 'clamp(200px, 40vw, 340px)', overflow: 'hidden' }}>
@@ -348,8 +257,8 @@ const RoomModal = ({ room, visible, onClose }) => {
                     animate="visible"
                     style={styles.modalAmenityItem}
                   >
-                    <i className={`bi ${a.icon}`} style={{ color: '#D4AF37', fontSize: '1.25rem' }} />
-                    <span style={{ color: '#CBD5E0', fontSize: '0.88rem' }}>{a.label}</span>
+                    <i className={`bi ${a.icon}`} style={{ color: '#fa780e', fontSize: '1.25rem' }} />
+                    <span style={{ color: '#1E3A5B', fontSize: '0.88rem' }}>{a.label}</span>
                   </motion.div>
                 ))}
               </div>
@@ -366,18 +275,14 @@ const RoomModal = ({ room, visible, onClose }) => {
               </div>
 
               {/* Actions */}
-              <div style={{ display: 'flex', gap: 14, marginTop: 32, flexWrap: 'wrap' }}>
+              <div style={{ display: 'flex', justifyContent: 'center', marginTop: 32, width: '100%' }}>
                 <motion.button
-                  whileHover={{ scale: 1.03 }}
-                  whileTap={{ scale: 0.97 }}
-                  style={styles.modalBackBtn}
-                  onClick={onClose}
-                  aria-label="Back to rooms"
-                >
-                  Back to Rooms
-                </motion.button>
-                <motion.button
-                  whileHover={{ scale: 1.03, boxShadow: '0 10px 30px rgba(212,175,55,0.5)' }}
+                  whileHover={{
+                    scale: 1.03,
+                    background: 'linear-gradient(135deg, #FFC27B 0%, #F47A6A 100%)',
+                    boxShadow: '0 10px 30px rgba(244, 122, 106, 0.25)',
+                    textShadow: '0 0 18px rgba(255, 92, 92, 0.95)',
+                  }}
                   whileTap={{ scale: 0.97 }}
                   style={styles.modalBookBtn}
                   onClick={() => {
@@ -386,7 +291,7 @@ const RoomModal = ({ room, visible, onClose }) => {
                   }}
                   aria-label="Book this room"
                 >
-                  Book Now &nbsp;<i className="bi bi-arrow-right" />
+                  Book Now 
                 </motion.button>
               </div>
             </div>
@@ -414,13 +319,9 @@ const LuxuryDivider = () => (
 const Rooms = () => {
   const [selectedRoom, setSelectedRoom] = useState(null);
   const [isModalVisible, setIsModalVisible] = useState(false);
-  const [showAll, setShowAll] = useState(false);
 
   const heroRef = useRef(null);
   const heroInView = useInView(heroRef, { once: true, margin: '-60px' });
-
-  const allRef = useRef(null);
-  const allInView = useInView(allRef, { once: true, margin: '-80px' });
 
   const showRoomModal = (room) => {
     setSelectedRoom(room);
@@ -452,10 +353,6 @@ const Rooms = () => {
           animate={heroInView ? 'visible' : 'hidden'}
           style={{ textAlign: 'center', marginBottom: 12 }}
         >
-          <span style={styles.overlineTag}>
-            <i className="bi bi-building" style={{ marginRight: 6, color: '#D4AF37' }} />
-            Shanvilla Resort
-          </span>
           <h2 style={styles.sectionTitle}>Rooms &amp; Suites</h2>
           <LuxuryDivider />
           <motion.p
@@ -465,182 +362,32 @@ const Rooms = () => {
             animate={heroInView ? 'visible' : 'hidden'}
             style={styles.sectionSubtitle}
           >
-            Discover 21 meticulously designed rooms — from cosy singles to spacious superior suites —
+            Discover meticulously designed rooms from cosy singles to spacious superior suites
             each offering a curated blend of elegance, comfort, and modern luxury.
           </motion.p>
         </motion.div>
 
-        {/* ── SWIPER / ALL ACCOMMODATIONS TOGGLE ── */}
-        <AnimatePresence mode="wait">
-          {!showAll ? (
+        <div style={{ display: 'grid', gap: 32, gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', marginTop: 20 }}>
+          {ROOMS.map((room) => (
             <motion.div
-              key="swiper-view"
-              initial={{ opacity: 0, y: 30 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -20 }}
+              key={room.id}
+              variants={fadeUp}
+              initial="hidden"
+              whileInView="visible"
+              viewport={{ once: true, amount: 0.2 }}
               transition={{ duration: 0.55, ease: [0.22, 1, 0.36, 1] }}
+              style={{ display: 'flex', justifyContent: 'center' }}
             >
-              {/* ── SWIPER ── */}
-              <div style={{ position: 'relative' }}>
-                <Swiper
-                  slidesPerView={1}
-                  spaceBetween={28}
-                  centeredSlides
-                  pagination={{ clickable: true }}
-                  navigation
-                  loop
-                  autoplay={{ delay: 5500, disableOnInteraction: false }}
-                  breakpoints={{
-                    480: { slidesPerView: 1.1, centeredSlides: true },
-                    640: { slidesPerView: 1.3, centeredSlides: true },
-                    768: { slidesPerView: 2, centeredSlides: false },
-                    1024: { slidesPerView: 3, centeredSlides: false },
-                    1280: { slidesPerView: 3, centeredSlides: false },
-                  }}
-                  modules={[Pagination, Navigation, Autoplay]}
-                  className="shanvilla-swiper"
-                  style={{ paddingBottom: 52, paddingTop: 8 }}
-                >
-                  {ROOMS.map((room) => (
-                    <SwiperSlide key={room.id} style={{ display: 'flex', justifyContent: 'center' }}>
-                      <SwiperRoomCard room={room} onViewDetails={showRoomModal} />
-                    </SwiperSlide>
-                  ))}
-                </Swiper>
-              </div>
-
-              {/* ── View All CTA ── */}
-              <div style={{ textAlign: 'center', marginTop: 12 }}>
-                <motion.button
-                  whileHover={{ scale: 1.04, boxShadow: '0 12px 36px rgba(143,211,254,0.3)' }}
-                  whileTap={{ scale: 0.97 }}
-                  style={styles.viewAllBtn}
-                  onClick={() => setShowAll(true)}
-                  aria-label="View all accommodations and pricing"
-                >
-                  View All Accommodations
-                  <i className="bi bi-grid-3x3-gap" style={{ marginLeft: 10 }} />
-                </motion.button>
-              </div>
+              <RoomCard room={room} onViewDetails={showRoomModal} />
             </motion.div>
-
-          ) : (
-            <motion.div
-              key="all-view"
-              ref={allRef}
-              initial={{ opacity: 0, y: 40 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -20 }}
-              transition={{ duration: 0.55, ease: [0.22, 1, 0.36, 1] }}
-            >
-              {/* ── Back button ── */}
-              <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 28 }}>
-                <motion.button
-                  whileHover={{ scale: 1.04 }}
-                  whileTap={{ scale: 0.97 }}
-                  style={styles.backBtn}
-                  onClick={() => setShowAll(false)}
-                  aria-label="Back to room slider"
-                >
-                  <i className="bi bi-arrow-left" style={{ marginRight: 8 }} />
-                  Back to Slider
-                </motion.button>
-              </div>
-
-              {/* ── Room Category Sections ── */}
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 56 }}>
-                {ROOMS.map((room, idx) => (
-                  <motion.div
-                    key={room.id}
-                    variants={fadeUp}
-                    custom={idx * 0.5}
-                    initial="hidden"
-                    animate={allInView ? 'visible' : 'hidden'}
-                    style={styles.roomSection}
-                  >
-                    {/* Room category header */}
-                    <div style={styles.roomSectionHeader}>
-                      <div>
-                        <h3 style={styles.roomSectionTitle}>{room.name}</h3>
-                        <p style={styles.roomSectionDesc}>{room.description}</p>
-                      </div>
-                      <AvailabilityBadge count={room.available} />
-                    </div>
-
-                    {/* Pricing grid */}
-                    <div style={styles.pricingGrid}>
-                      {/* Bed & Breakfast */}
-                      <GlassPricingCard
-                        key={`${room.id}-bb`}
-                        room={{ ...room, pricingHighlight: room.pricing.bedBreakfast }}
-                        index={0}
-                        planLabel="Bed & Breakfast"
-                        planKey="bedBreakfast"
-                      />
-                      {/* Half Board */}
-                      <GlassPricingCard
-                        key={`${room.id}-hb`}
-                        room={{ ...room, pricingHighlight: room.pricing.halfBoard }}
-                        index={1}
-                        planLabel="Half Board"
-                        planKey="halfBoard"
-                      />
-                      {/* Full Board */}
-                      <GlassPricingCard
-                        key={`${room.id}-fb`}
-                        room={{ ...room, pricingHighlight: room.pricing.fullBoard }}
-                        index={2}
-                        planLabel="Full Board"
-                        planKey="fullBoard"
-                      />
-                    </div>
-                  </motion.div>
-                ))}
-              </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
+          ))}
+        </div>
       </div>
 
       {/* ── Room Detail Modal ── */}
       <RoomModal room={selectedRoom} visible={isModalVisible} onClose={handleModalClose} />
 
-      {/* ── Swiper & Modal Styles ── */}
       <style>{`
-        /* Swiper overrides */
-        .shanvilla-swiper .swiper-pagination-bullet {
-          background: rgba(143, 211, 254, 0.4);
-          opacity: 1;
-          width: 8px;
-          height: 8px;
-          transition: all 0.3s ease;
-        }
-        .shanvilla-swiper .swiper-pagination-bullet-active {
-          background: #D4AF37;
-          width: 28px;
-          border-radius: 4px;
-        }
-        .shanvilla-swiper .swiper-button-next,
-        .shanvilla-swiper .swiper-button-prev {
-          color: #D4AF37;
-          background: rgba(15, 39, 68, 0.75);
-          backdrop-filter: blur(10px);
-          border-radius: 50%;
-          width: 44px;
-          height: 44px;
-          border: 1px solid rgba(212, 175, 55, 0.35);
-          transition: all 0.3s ease;
-        }
-        .shanvilla-swiper .swiper-button-next::after,
-        .shanvilla-swiper .swiper-button-prev::after {
-          font-size: 14px;
-          font-weight: 700;
-        }
-        .shanvilla-swiper .swiper-button-next:hover,
-        .shanvilla-swiper .swiper-button-prev:hover {
-          background: rgba(212, 175, 55, 0.2);
-          border-color: #D4AF37;
-        }
         /* Modal overrides */
         .shanvilla-room-modal .ant-modal-content {
           background: transparent !important;
@@ -648,26 +395,34 @@ const Rooms = () => {
           border-radius: 24px !important;
           padding: 0 !important;
           overflow: hidden;
+          max-width: 95vw !important;
         }
         .shanvilla-room-modal .ant-modal-close {
           top: 14px !important;
           right: 14px !important;
           z-index: 10;
         }
-        /* Responsive: pricing grid */
+        .shanvilla-room-modal .ant-modal-close:hover span,
+        .shanvilla-room-modal .ant-modal-close:hover {
+          background: rgba(224, 59, 59, 0.95) !important;
+          color: #FFFFFF !important;
+          border-color: rgba(224, 59, 59, 0.4) !important;          border-radius: 50% !important;        }
+        /* Responsive: modal and content */
         @media (max-width: 767px) {
-          .shanvilla-pricing-grid {
-            grid-template-columns: 1fr !important;
+          .shanvilla-room-modal .ant-modal-content {
+            width: calc(100vw - 24px) !important;
+            margin: 12px auto !important;
           }
-          .shanvilla-room-section-header {
-            flex-direction: column !important;
-            gap: 12px !important;
+          .shanvilla-room-modal .ant-modal-close {
+            top: 10px !important;
+            right: 10px !important;
           }
-        }
-        @media (max-width: 480px) {
-          .shanvilla-swiper .swiper-button-next,
-          .shanvilla-swiper .swiper-button-prev {
-            display: none;
+          .shanvilla-room-modal .ant-modal-body {
+            padding: 0 !important;
+          }
+          .shanvilla-room-modal .ant-modal-close:hover span,
+          .shanvilla-room-modal .ant-modal-close:hover {
+            background: rgba(224, 59, 59, 0.95) !important;
           }
         }
       `}</style>
@@ -680,8 +435,9 @@ const Rooms = () => {
 const styles = {
   section: {
     position: 'relative',
+    boxShadow: "0px 10px 25px rgba(0, 0, 0, 0.6)",
     background: 'linear-gradient(180deg, #FAF5EF 0%, #FFFFFF 55%, #F8F9FA 100%)',
-    padding: 'clamp(48px, 6vw, 80px) 0',
+    padding: 'clamp(28px, 4vw, 29px) 0',
     overflow: 'hidden',
   },
   container: {
@@ -711,20 +467,6 @@ const styles = {
     background: 'radial-gradient(circle, rgba(212,175,55,0.1) 0%, transparent 70%)',
     pointerEvents: 'none',
   },
-  overlineTag: {
-    display: 'inline-flex',
-    alignItems: 'center',
-    background: 'linear-gradient(135deg, #0F8F46 0%, #7DC96A 100%)',
-    color: '#FFFFFF',
-    fontSize: '0.78rem',
-    fontWeight: 600,
-    letterSpacing: '0.18em',
-    textTransform: 'uppercase',
-    padding: '6px 18px',
-    borderRadius: 40,
-    border: '1px solid rgba(15,143,70,0.2)',
-    marginBottom: 18,
-  },
   sectionTitle: {
     fontFamily: "'Playfair Display', Georgia, serif",
     fontSize: 'clamp(2rem, 4.5vw, 3rem)',
@@ -742,13 +484,13 @@ const styles = {
     lineHeight: 1.75,
   },
 
-  /* ─── Swiper Card ─── */
+  /* ─── Room Card ─── */
   swiperCard: {
-    background: 'linear-gradient(160deg, #0F8F46 0%, #2A7D33 100%)',
+    background: 'linear-gradient(160deg, #eef7ff 0%, #f5efe6 100%)',
     borderRadius: 22,
     overflow: 'hidden',
-    border: '1px solid rgba(15,143,70,0.16)',
-    boxShadow: '0 16px 48px rgba(15,143,70,0.18)',
+    border: '1px solid rgba(79, 112, 168, 0.16)',
+    boxShadow: '0 16px 48px rgba(59,95,140,0.12)',
     width: '100%',
     maxWidth: 360,
     cursor: 'default',
@@ -756,7 +498,7 @@ const styles = {
   cardImgOverlay: {
     position: 'absolute',
     inset: 0,
-    background: 'linear-gradient(to top, rgba(15,143,70,0.75) 0%, transparent 50%)',
+    background: 'linear-gradient(to top, rgba(14, 93, 158, 0.24) 0%, transparent 55%)',
   },
   swiperCardBody: {
     padding: '20px 22px 24px',
@@ -765,12 +507,12 @@ const styles = {
     fontFamily: "'Playfair Display', serif",
     fontSize: '1.2rem',
     fontWeight: 700,
-    color: '#FFFFFF',
+    color: '#08111b',
     margin: '0 0 8px',
     letterSpacing: '-0.01em',
   },
   cardDesc: {
-    color: '#E9F2EA',
+    color: '#2d4368b9',
     fontSize: '0.85rem',
     lineHeight: 1.65,
     margin: '0 0 16px',
@@ -785,19 +527,19 @@ const styles = {
     marginBottom: 18,
   },
   fromLabel: {
-    color: '#E9F2EA',
+    color: '#4A6AA6',
     fontSize: '0.75rem',
     textTransform: 'uppercase',
     letterSpacing: '0.1em',
     marginRight: 6,
   },
   priceTag: {
-    color: '#F58220',
+    color: '#f3a20a',
     fontSize: '1.35rem',
     fontWeight: 700,
   },
   perNight: {
-    color: 'rgba(255,255,255,0.7)',
+    color: 'rgba(47, 67, 96, 0.85)',
     fontSize: '0.8rem',
     marginLeft: 3,
   },
@@ -808,8 +550,8 @@ const styles = {
     width: '100%',
     padding: '11px 0',
     borderRadius: 12,
-    background: 'linear-gradient(135deg, #F58220 0%, #D46B10 100%)',
-    color: '#FFFFFF',
+    background: 'linear-gradient(135deg, #7face0 0%, #5689c3 100%)',
+    color: '#ffffff',
     fontWeight: 700,
     fontSize: '0.9rem',
     border: 'none',
@@ -822,147 +564,16 @@ const styles = {
   badge: {
     display: 'inline-flex',
     alignItems: 'center',
-    background: 'rgba(15,143,70,0.12)',
+    background: 'rgba(224, 59, 59, 0.1)',
     backdropFilter: 'blur(10px)',
-    color: '#0F8F46',
-    fontSize: '0.72rem',
+    color: '#f70808',
+    fontSize: '0.95rem',
     fontWeight: 700,
     padding: '4px 12px',
     borderRadius: 40,
-    border: '1px solid rgba(15,143,70,0.2)',
+    border: '1px solid rgba(224,59,59,0.3)',
     letterSpacing: '0.04em',
     whiteSpace: 'nowrap',
-  },
-
-  /* ─── View All / Back buttons ─── */
-  viewAllBtn: {
-    display: 'inline-flex',
-    alignItems: 'center',
-    padding: '14px 36px',
-    borderRadius: 14,
-    background: 'linear-gradient(135deg, #0F8F46 0%, #7DC96A 100%)',
-    color: '#FFFFFF',
-    fontWeight: 700,
-    fontSize: '0.95rem',
-    border: '1px solid rgba(15,143,70,0.2)',
-    cursor: 'pointer',
-    letterSpacing: '0.03em',
-    transition: 'all 0.3s ease',
-    boxShadow: '0 8px 28px rgba(15,143,70,0.2)',
-  },
-  backBtn: {
-    display: 'inline-flex',
-    alignItems: 'center',
-    padding: '10px 24px',
-    borderRadius: 12,
-    background: 'rgba(15,143,70,0.08)',
-    color: '#0F8F46',
-    fontWeight: 600,
-    fontSize: '0.88rem',
-    border: '1px solid rgba(15,143,70,0.2)',
-    cursor: 'pointer',
-    transition: 'all 0.25s ease',
-  },
-
-  /* ─── All Accommodations ─── */
-  roomSection: {
-    background: 'rgba(255,255,255,0.65)',
-    backdropFilter: 'blur(12px)',
-    borderRadius: 24,
-    border: '1px solid rgba(143,211,254,0.25)',
-    padding: 'clamp(24px, 4vw, 40px)',
-    boxShadow: '0 12px 40px rgba(15,39,68,0.1)',
-  },
-  roomSectionHeader: {
-    display: 'flex',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    flexWrap: 'wrap',
-    gap: 16,
-    marginBottom: 28,
-  },
-  roomSectionTitle: {
-    fontFamily: "'Playfair Display', serif",
-    fontSize: 'clamp(1.3rem, 2.5vw, 1.7rem)',
-    fontWeight: 700,
-    color: '#0F2744',
-    margin: '0 0 8px',
-  },
-  roomSectionDesc: {
-    color: '#4A6080',
-    fontSize: '0.92rem',
-    lineHeight: 1.65,
-    maxWidth: 520,
-    margin: 0,
-  },
-  pricingGrid: {
-    display: 'grid',
-    gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))',
-    gap: 24,
-  },
-  glassPricingCard: {
-    background: 'linear-gradient(160deg, #0F2744 0%, #183B63 100%)',
-    borderRadius: 20,
-    overflow: 'hidden',
-    border: '1px solid rgba(143,211,254,0.14)',
-    boxShadow: '0 16px 40px rgba(15,39,68,0.22)',
-  },
-  imgOverlay: {
-    position: 'absolute',
-    inset: 0,
-    background: 'linear-gradient(to top, rgba(15,39,68,0.75) 0%, transparent 55%)',
-  },
-  roomNameOverlay: {
-    fontFamily: "'Playfair Display', serif",
-    fontSize: '1rem',
-    fontWeight: 700,
-    color: '#FFFFFF',
-  },
-  pricingRow: {
-    display: 'flex',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    padding: '9px 0',
-    borderBottom: '1px solid rgba(143,211,254,0.1)',
-  },
-  pricingLabel: {
-    color: '#8FD3FE',
-    fontSize: '0.82rem',
-  },
-  pricingAmount: {
-    color: '#D4AF37',
-    fontWeight: 700,
-    fontSize: '0.95rem',
-  },
-  amenityGrid: {
-    display: 'flex',
-    flexWrap: 'wrap',
-    gap: 8,
-    marginTop: 16,
-    marginBottom: 20,
-  },
-  amenityChip: {
-    display: 'inline-flex',
-    alignItems: 'center',
-    gap: 6,
-    background: 'rgba(143,211,254,0.08)',
-    border: '1px solid rgba(143,211,254,0.15)',
-    borderRadius: 8,
-    padding: '4px 10px',
-  },
-  goldButton: {
-    display: 'block',
-    width: '100%',
-    padding: '11px 0',
-    borderRadius: 12,
-    background: 'linear-gradient(135deg, #F58220 0%, #D46B10 100%)',
-    color: '#FFFFFF',
-    fontWeight: 700,
-    fontSize: '0.9rem',
-    border: 'none',
-    cursor: 'pointer',
-    letterSpacing: '0.02em',
-    transition: 'all 0.25s ease',
   },
 
   /* ─── Modal ─── */
@@ -973,17 +584,18 @@ const styles = {
     width: 36,
     height: 36,
     borderRadius: '50%',
-    background: 'rgba(15,143,70,0.9)',
+    background: 'rgba(14, 93, 158, 0.95)',
     backdropFilter: 'blur(8px)',
     color: '#FFFFFF',
     fontSize: '1rem',
-    border: '1px solid rgba(15,143,70,0.3)',
+    border: '1px solid rgba(224,59,59,0.3)',
     cursor: 'pointer',
+    transition: 'all 0.25s ease',
   },
   modalHeroOverlay: {
     position: 'absolute',
     inset: 0,
-    background: 'linear-gradient(to top, rgba(15,143,70,0.88) 0%, rgba(15,143,70,0.2) 60%, transparent 100%)',
+    background: 'linear-gradient(to top, rgba(14, 158, 158, 0.68) 0%, rgba(244, 240, 228, 0.12) 55%, transparent 100%)',
   },
   modalRoomBadge: {
     marginBottom: 10,
@@ -992,13 +604,12 @@ const styles = {
     fontFamily: "'Playfair Display', serif",
     fontSize: 'clamp(1.5rem, 3.5vw, 2.2rem)',
     fontWeight: 700,
-    color: '#FFFFFF',
+    color: '#f3f4f5',
     margin: '0 0 8px',
     lineHeight: 1.2,
-    textShadow: '0 2px 8px rgba(0,0,0,0.4)',
   },
   modalDesc: {
-    color: '#E9F2EA',
+    color: '#0d1520',
     lineHeight: 1.75,
     fontSize: '0.95rem',
     marginBottom: 24,
@@ -1008,7 +619,7 @@ const styles = {
     fontFamily: "'Playfair Display', serif",
     fontSize: '1.1rem',
     fontWeight: 700,
-    color: '#FFFFFF',
+    color: '#1C3D6C',
     margin: '0 0 14px',
   },
   modalAmenityGrid: {
@@ -1020,10 +631,10 @@ const styles = {
     display: 'flex',
     alignItems: 'center',
     gap: 10,
-    background: 'rgba(15,143,70,0.08)',
+    background: 'rgba(14, 93, 158, 0.08)',
     borderRadius: 10,
     padding: '10px 14px',
-    border: '1px solid rgba(15,143,70,0.12)',
+    border: '1px solid rgba(14,93,158,0.15)',
   },
   modalPricingGrid: {
     display: 'grid',
@@ -1031,49 +642,36 @@ const styles = {
     gap: 12,
   },
   modalPricingCard: {
-    background: 'rgba(255,255,255,0.05)',
+    background: 'rgba(45, 45, 83, 0.06)',
     borderRadius: 12,
     padding: '14px 18px',
-    border: '1px solid rgba(245,130,32,0.2)',
+    border: '1px solid rgba(17, 9, 1, 0.32)',
     display: 'flex',
     flexDirection: 'column',
     gap: 6,
   },
   modalPricingLabel: {
-    color: '#0F8F46',
+    color: '#4A6AA6',
     fontSize: '0.78rem',
     textTransform: 'uppercase',
     letterSpacing: '0.08em',
     fontWeight: 600,
   },
   modalPricingAmount: {
-    color: '#F58220',
+    color: '#f5910f',
     fontSize: '1.1rem',
     fontWeight: 700,
   },
-  modalBackBtn: {
-    flex: 1,
-    minWidth: 130,
-    padding: '12px 20px',
-    borderRadius: 12,
-    background: 'rgba(15,143,70,0.06)',
-    color: '#0F8F46',
-    fontWeight: 600,
-    fontSize: '0.9rem',
-    border: '1px solid rgba(15,143,70,0.18)',
-    cursor: 'pointer',
-    transition: 'all 0.25s ease',
-  },
   modalBookBtn: {
-    flex: 2,
-    minWidth: 140,
-    padding: '12px 24px',
+    width: '100%',
+    maxWidth: 300,
+    padding: '14px 26px',
     borderRadius: 12,
-    background: 'linear-gradient(135deg, #F58220 0%, #D46B10 100%)',
+    background: 'linear-gradient(135deg, #7FADE0 0%, #5688C3 100%)',
     color: '#FFFFFF',
     fontWeight: 700,
     fontSize: '0.95rem',
-    border: 'none',
+    border: 'solid 1px rgba(79, 112, 168, 0.75)',
     cursor: 'pointer',
     letterSpacing: '0.02em',
     transition: 'all 0.25s ease',

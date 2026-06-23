@@ -1,57 +1,57 @@
-import  { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import styled from 'styled-components';
 import { FaFacebookF, FaInstagram, FaSpinner, FaTiktok } from 'react-icons/fa';
 import { motion } from 'framer-motion';
 import { FiSend } from 'react-icons/fi';
 
 const FooterContainer = styled.footer`
-  background: #0a2540;
-  color: #f5f7fa;
-  padding: 4rem 1.5rem;
+  background: #b7d3d1c5;
+  color: #1f2937;
+  padding: 2.2rem 1.5rem 1.75rem;
 `;
 
 const FooterGrid = styled.div`
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-  gap: 3rem;
+  gap: 1.8rem;
   max-width: 1200px;
-  margin: 0 auto 3rem;
+  margin: 0 auto 1.8rem;
 `;
 
 const FooterTitle = styled.h3`
   font-family: 'Playfair Display', serif;
   font-size: 24px;
-  margin-bottom: 1.5rem;
+  margin-bottom: 1.1rem;
   font-weight: bold;
-  color: #f5f7fa;
+  color: #0f172a;
 `;
 
 const FooterLink = styled.a`
-  color: #cbd5e1;
+  color: #334155;
   text-decoration: none;
   display: block;
-  margin-bottom: 0.75rem;
+  margin-bottom: 0.65rem;
   transition: color 0.3s ease;
 
   &:hover {
-    color:rgb(206, 4, 4);
+    color: #F7B75E;
   }
 `;
 
 const ContactText = styled.p`
-  color: #ccc;
+  color: #334155;
   margin-bottom: 1rem;
   font-size: 14px;
 `;
 
 const SocialLinks = styled.div`
   display: flex;
-  gap: 1rem;
-  font-size: 1.25rem;
-  margin-top: 1.5rem;
+  gap: 0.85rem;
+  font-size: 1.15rem;
+  margin-top: 1rem;
 
   a {
-    color: #ccc;
+    color: #1f2937;
     transition: color 0.3s ease;
 
     &:hover {
@@ -61,8 +61,8 @@ const SocialLinks = styled.div`
 `;
 
 const NewsletterSection = styled(motion.div)`
-  background: #1b3a57;
-  padding: 1.5rem;
+  background: #50a5f5;
+  padding: 1.15rem 1.2rem;
   border-radius: 10px;
   text-align: center;
 `;
@@ -89,20 +89,20 @@ const NewsletterInput = styled.input`
 `;
 
 const NewsletterButton = styled.button`
-  background: #87ceeb;
-  color: #0a2540;
+  background: #e5eef1;
+  color: #489aec;
   padding: 10px 10px;
   border: none;
   font-weight: bold;
   cursor: pointer;
 
   &:hover {
-    background: #00bcd4;
+    background: #93e0eb;
   }
 `;
 
 const StatusMessage = styled.p`
-  color: ${({ error }) => (error ? '#ff6b6b' : '#b0f7b0')};
+  color: ${({ error }) => (error ? '#ff6b6b' : '#dee7de')};
   font-size: 0.9rem;
   margin-top: 10px;
 `;
@@ -111,7 +111,7 @@ const Divider = styled.hr`
   border: none;
   height: 1px;
   background-color: #1d3b5c;
-  margin: 3rem auto 2rem;
+  margin: 2rem auto 1.4rem;
   max-width: 1200px;
 `;
 
@@ -121,7 +121,7 @@ const BottomRow = styled.div`
   display: flex;
   flex-direction: column;
   align-items: center;
-  color: #94a3b8;
+  color: #334155;
   font-size: 14px;
 
   @media (min-width: 768px) {
@@ -130,13 +130,13 @@ const BottomRow = styled.div`
   }
 
   a {
-    color: #aaa;
+    color: #334155;
     margin: 0 0.75rem;
     text-decoration: none;
     transition: color 0.3s;
 
     &:hover {
-      color: #fff;
+      color: #085dfc;
     }
   }
 `;
@@ -154,6 +154,26 @@ const Footer = () => {
   const [email, setEmail] = useState('');
   const [status, setStatus] = useState(null);
   const [errorMsg, setErrorMsg] = useState('');
+  const statusTimerRef = useRef(null);
+
+  useEffect(() => {
+    if (status === 'success' || status === 'error') {
+      if (statusTimerRef.current) {
+        clearTimeout(statusTimerRef.current);
+      }
+      statusTimerRef.current = window.setTimeout(() => {
+        setStatus(null);
+        setErrorMsg('');
+      }, 120000);
+    }
+
+    return () => {
+      if (statusTimerRef.current) {
+        clearTimeout(statusTimerRef.current);
+        statusTimerRef.current = null;
+      }
+    };
+  }, [status]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -198,11 +218,11 @@ const Footer = () => {
 
         <motion.div initial="hidden" whileInView="visible" viewport={{ once: true }} custom={2} variants={fadeIn}>
           <FooterTitle>Quick Links</FooterTitle>
-          <FooterLink href="#rooms">Rooms & Suites</FooterLink>
-          <FooterLink href="#about">about</FooterLink>
-          <FooterLink href="#amenities">Amenities</FooterLink>
-          <FooterLink href="#reviews">Booking</FooterLink>
-          <FooterLink href="#contact">Contact Us</FooterLink>
+          <FooterLink href="/#rooms">Rooms & Suites</FooterLink>
+          <FooterLink href="/#about">about</FooterLink>
+          <FooterLink href="/#amenities">Amenities</FooterLink>
+          <FooterLink href="/#reviews">Booking</FooterLink>
+          <FooterLink href="/#contact">Contact Us</FooterLink>
         </motion.div>
 
         <motion.div initial="hidden" whileInView="visible" viewport={{ once: true }} custom={3} variants={fadeIn}>
@@ -239,9 +259,9 @@ const Footer = () => {
 
       <BottomRow>
         <div>© {new Date().getFullYear()} Shanvilla Resort Ltd. All rights reserved.</div>
-        <div>
-          <FooterLink href="/terms">Privacy Policy</FooterLink>
-          <FooterLink href="/terms">Terms & Conditions</FooterLink>
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '1rem', alignItems: 'center' }}>
+          <FooterLink href="/terms">Privacy</FooterLink>
+          <FooterLink href="/terms">Terms</FooterLink>
           <FooterLink href="/#home">Sitemap</FooterLink>
         </div>
       </BottomRow>

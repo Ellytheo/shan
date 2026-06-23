@@ -20,7 +20,7 @@ const css = `
 
   /* ── NAV ROOT (the visible pill) ── */
   .sv-nav {
-    pointer-events: all;
+    pointer-events: auto;
     background: rgba(185, 245, 235, 0.12);
     backdrop-filter: blur(28px) saturate(180%);
     -webkit-backdrop-filter: blur(28px) saturate(180%);
@@ -54,6 +54,23 @@ const css = `
     align-items: center;
     justify-content: space-between;
     position: relative;
+    transition: height 0.3s ease, padding 0.3s ease;
+  }
+
+  @media (max-width: 768px) {
+    .sv-nav__inner {
+      height: 58px;
+    }
+  }
+
+  @media (max-width: 480px) {
+    .sv-nav__inner {
+      height: 52px;
+      padding: 0 12px;
+    }
+    .sv-nav-wrap {
+      padding: 0 10px;
+    }
   }
 
   /* ── LOGO ── */
@@ -70,8 +87,20 @@ const css = `
     width: auto;
     object-fit: contain;
     border-radius: 10px;
-    transition: transform 0.3s ease, filter 0.3s ease;
+    transition: transform 0.3s ease, filter 0.3s ease, height 0.3s ease;
     filter: drop-shadow(0 0 8px rgba(173,216,230,0.6)) drop-shadow(0 0 16px rgba(135,206,250,0.4));
+  }
+
+  @media (max-width: 768px) {
+    .sv-nav__logo-img {
+      height: 48px;
+    }
+  }
+
+  @media (max-width: 480px) {
+    .sv-nav__logo-img {
+      height: 42px;
+    }
   }
 
   .sv-nav__logo:hover .sv-nav__logo-img {
@@ -112,7 +141,7 @@ const css = `
 
   .sv-nav__link {
     position: relative;
-    font-family: 'My Soul', cursive, 'Inter', sans-serif;
+    font-family: 'Playfair Display', cursive, 'Inter', sans-serif;
     font-size: 18px;
     font-weight: 600;
     color: #F58220;
@@ -177,45 +206,58 @@ const css = `
 
   /* ── MOBILE DRAWER ── */
   .sv-nav__drawer {
-    display: none;
+    display: flex;
+    flex-direction: column;
+    position: absolute;
+    top: calc(100% + 8px);
+    right: 8px;
+    left: auto;
+    width: 180px;
+    min-width: 180px;
+    max-width: 220px;
+    background: rgba(185,245,235,0.95);
+    backdrop-filter: blur(24px);
+    -webkit-backdrop-filter: blur(24px);
+    border: 1px solid rgba(255,255,255,0.3);
+    border-radius: 16px;
+    box-shadow: 0 12px 32px rgba(31,38,135,0.18);
+    padding: 0 16px;
+    gap: 0;
+
+    max-height: 0;
+    overflow: hidden;
+    opacity: 0;
+    pointer-events: none;
+    transition: max-height 0.4s cubic-bezier(0.25,0.8,0.25,1),
+                opacity 0.3s ease,
+                padding 0.35s ease;
   }
 
   @media (max-width: 768px) {
     .sv-nav__drawer {
+      width: 180px;
+      min-width: 180px;
+      max-width: 220px;
+      right: 8px;
+      left: auto;
       display: flex;
-      flex-direction: column;
-      position: absolute;
-      top: calc(100% + 8px);
-      right: 0;
-      left: 0;
-      background: rgba(185,245,235,0.75);
-      backdrop-filter: blur(24px);
-      -webkit-backdrop-filter: blur(24px);
-      border: 1px solid rgba(255,255,255,0.3);
-      border-radius: 16px;
-      box-shadow: 0 12px 32px rgba(31,38,135,0.18);
-      padding: 0 16px;
-      gap: 0;
-
-      max-height: 0;
-      overflow: hidden;
-      opacity: 0;
-      transition: max-height 0.4s cubic-bezier(0.25,0.8,0.25,1),
-                  opacity 0.3s ease,
-                  padding 0.35s ease;
+      width: min(280px, calc(100% - 20px));
+      right: 10px;
+      left: auto;
     }
 
     .sv-nav__drawer--open {
       max-height: 420px;
       opacity: 1;
       padding: 12px 16px 18px;
+      pointer-events: auto;
     }
   }
 
   .sv-nav__drawer-link {
-    font-family: 'My Soul', cursive, 'Inter', sans-serif;
-    font-size: 20px;
-    font-weight: 600;
+    font-family: 'Playfair Display', serif, 'Inter', sans-serif;
+    font-size: 24px;
+    font-weight: 700;
     color: #F58220;
     text-decoration: none;
     padding: 11px 8px;
@@ -238,7 +280,7 @@ const css = `
   }
 
   .sv-nav__drawer-link--active {
-    font-weight: 700;
+    font-weight: 800;
   }
 
   .sv-nav__drawer-dot {
@@ -304,17 +346,6 @@ const Navbar = () => {
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
-  // close drawer on outside click
-  useEffect(() => {
-    if (!open) return;
-    const close = (e) => {
-      if (!e.target.closest(".sv-nav")) setOpen(false);
-    };
-    document.addEventListener("click", close);
-    return () => document.removeEventListener("click", close);
-  }, [open]);
-
-  const handleLinkClick = () => setOpen(false);
 
   return (
     <div className="sv-nav-wrap">
@@ -322,7 +353,7 @@ const Navbar = () => {
         <div className="sv-nav__inner">
 
           {/* ── LOGO ── */}
-          <a className="sv-nav__logo" href="#home" aria-label="Shanvilla – go to home">
+          <a className="sv-nav__logo" href="/#home" aria-label="Shanvilla – go to home">
             <img
               className="sv-nav__logo-img"
               src={logoImage}
@@ -331,21 +362,22 @@ const Navbar = () => {
           </a>
 
           {/* ── DESKTOP LINKS ── */}
-          <nav className="sv-nav__links" aria-label="Site sections">
+          <div className="sv-nav__links" aria-label="Site sections">
             {NAV_ITEMS.map(({ id, label }) => (
               <a
                 key={id}
                 className={`sv-nav__link${active === id ? " sv-nav__link--active" : ""}`}
-                href={`#${id}`}
+                href={`/#${id}`}
                 aria-current={active === id ? "page" : undefined}
               >
                 {label}
               </a>
             ))}
-          </nav>
+          </div>
 
           {/* ── HAMBURGER ── */}
           <button
+            type="button"
             className="sv-nav__hamburger"
             aria-label={open ? "Close menu" : "Open menu"}
             aria-expanded={open}
@@ -367,10 +399,9 @@ const Navbar = () => {
             <a
               key={id}
               className={`sv-nav__drawer-link${active === id ? " sv-nav__drawer-link--active" : ""}`}
-              href={`#${id}`}
+              href={`/#${id}`}
               role="menuitem"
               aria-current={active === id ? "page" : undefined}
-              onClick={handleLinkClick}
             >
               <span className="sv-nav__drawer-dot" aria-hidden="true" />
               {label}

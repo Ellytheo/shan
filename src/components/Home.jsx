@@ -1,3 +1,4 @@
+import { useEffect, useRef, useState } from "react";
 import styled, { keyframes } from "styled-components";
 import { FaArrowRight } from "react-icons/fa";
 
@@ -71,7 +72,7 @@ const HeroContent = styled.div`
 `;
 
 const HeroParagraph = styled.p`
-  font-family: "Kaushan Script", cursive;
+  font-family: 'Playfair Display', serif;
   font-weight: 400;
   font-size: 1.3rem;
   color: rgb(226, 57, 57);
@@ -153,7 +154,7 @@ const HighlightText = styled.div`
   padding: 20px;
 
   h3 {
-    font-family: 'Kaushan Script', cursive;
+    font-family: 'Playfair Display', serif;
     font-size: 1.8rem;
     color: rgba(245, 9, 9, 1);
 
@@ -164,7 +165,7 @@ const HighlightText = styled.div`
 
   p {
     font-family: "Playfair Display", serif;
-    font-size: 2rem;
+    font-size: 1.75rem;
     color: #050505;
 
     @media (max-width: 768px) {
@@ -173,7 +174,7 @@ const HighlightText = styled.div`
   }
 
   a {
-    font-family: 'Alex Brush', cursive;
+    font-family: 'Playfair Display', serif;
     text-decoration: none;
     color: #d97706;
     font-weight: bold;
@@ -192,18 +193,82 @@ const HighlightText = styled.div`
   }
 `;
 
-const HighlightImage = styled.img`
+const ImageCard = styled.div`
   width: 100%;
-  height: auto;
   border-radius: 12px;
+  overflow: hidden;
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
-  object-fit: cover;
   margin-bottom: 20px;
+  position: relative;
+  transform: translateZ(0);
 
   @media (min-width: 768px) {
     margin-bottom: 0;
   }
 `;
+
+const AnimatedImage = styled.img`
+  width: 100%;
+  height: auto;
+  object-fit: cover;
+  display: block;
+  border-radius: 12px;
+  will-change: transform, opacity;
+  
+  /* Slide from the hidden side based on the direction prop, stopping at the boundary (translateX(0)) */
+  transform: ${props => 
+    props.$isInView 
+      ? 'translateX(0)' 
+      : (props.$direction === 'left' ? 'translateX(-100%)' : 'translateX(100%)')
+  };
+  opacity: ${props => props.$isInView ? 1 : 0};
+  
+  transition: transform 0.9s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.9s ease-out;
+  transition-delay: ${props => props.$isInView ? props.$delay || '0s' : '0s'};
+`;
+
+const ScrollHighlightImage = ({ src, alt, delay, direction }) => {
+  const [isInView, setIsInView] = useState(false);
+  const ref = useRef(null);
+
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          setIsInView(true);
+        } else {
+          setIsInView(false); // reset so it triggers every time the user scrolls back into it
+        }
+      },
+      {
+        threshold: 0.1, // trigger when 10% of the image is visible
+      }
+    );
+
+    if (ref.current) {
+      observer.observe(ref.current);
+    }
+
+    return () => {
+      if (ref.current) {
+        observer.unobserve(ref.current);
+      }
+    };
+  }, []);
+
+  return (
+    <ImageCard ref={ref}>
+      <AnimatedImage
+        src={src}
+        alt={alt}
+        loading="lazy"
+        $isInView={isInView}
+        $delay={delay}
+        $direction={direction}
+      />
+    </ImageCard>
+  );
+};
 
 const HeroOverlay = styled.div`
   position: relative;
@@ -308,7 +373,12 @@ const Home = () => {
           ].map((item, index) => (
             <div className="row align-items-center mb-5" key={item.title}>
               <div className={`col-12 col-md-6 ${index % 2 !== 0 ? 'order-md-2' : ''}`}>
-                <HighlightImage src={item.img} alt={item.title} />
+                <ScrollHighlightImage
+                  src={item.img}
+                  alt={item.title}
+                  delay={`${index * 0.13}s`}
+                  direction={index % 2 === 0 ? 'right' : 'left'}
+                />
               </div>
               <div className={`col-12 col-md-6 ${index % 2 !== 0 ? 'order-md-1' : ''}`}>
                 <HighlightText>

@@ -18,12 +18,12 @@ const AboutSection = styled.section`
 `;
 
 const SectionTitle = styled.h2`
-  font-family: 'Kings', cursive;
+  font-family: 'Playfair Display', serif;
   text-align: center;
   margin-bottom: 20px;
   color: #0F8F46;
   padding:10px;
-  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.59);
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.37);
   font-size: clamp(2rem, 3vw, 2.5rem);
 `;
 
@@ -47,9 +47,9 @@ const TextContent = styled.div`
 
   p {
     margin-bottom: 20px;
-    line-height: 1.6;
-    font-size: clamp(1rem, 1.5vw, 1.25rem);
-    font-family: 'My Soul', cursive;
+    line-height: 1.7;
+    font-size: clamp(1.25rem, 2.5vw, 1.55rem);
+    font-family: 'Playfair Display', serif;
   }
 `;
 
@@ -90,24 +90,24 @@ const StorySection = styled.section`
   max-width: 960px;
   border-radius: 30px;
   box-shadow: 0 8px 30px rgba(0, 0, 0, 0.4);
-  color: #0c0c0c;
+  color: #131212;
   text-align: center;
 
   h2 {
-    font-family: "Kaushan Script", cursive;
-    font-weight: 700;
-    font-size: clamp(2rem, 4vw, 3rem);
+    font-family: 'Playfair Display', serif;
+    font-weight: 400;
+    font-size: clamp(1.75rem, 3vw, 2.5rem);
     margin-bottom: 25px;
     color: #0F8F46;
     letter-spacing: 1px;
   }
 
   p {
-    font-size: clamp(0.95rem, 1.5vw, 1.1rem);
-    line-height: 1.85;
+    font-size: clamp(1.25rem, 2.2vw, 1.3rem);
+    line-height: 1.75;
     white-space: pre-line;
     margin-bottom: 24px;
-    font-family: "Kaushan Script", cursive;
+    font-family: 'Playfair Display', serif;
   }
 
   strong {
