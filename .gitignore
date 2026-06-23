@@ -24,3 +24,5 @@ dist-ssr
 *.sw?
 # Ignore large local video
 /public/videos/shanvilla2.mp4
+
+.vercel
