@@ -2,6 +2,7 @@ import { useState, useRef } from 'react';
 import { Modal } from 'antd';
 import { motion, AnimatePresence, useInView } from 'framer-motion';
 import 'bootstrap-icons/font/bootstrap-icons.css';
+import { useRoomAvailability } from '../context/RoomAvailabilityContext';
 import pic5 from '../images/pic5.jpg';
 import pic15 from '../images/pic15.jpg';
 import room1 from '../images/standard.webp';
@@ -14,7 +15,7 @@ const ROOMS = [
     id: 1,
     name: 'Standard Single Room',
     available: 6,
-    startingPrice: 4000,
+    startingPrice: 5000,
     description:
       'A well-appointed retreat offering modern comforts and elegant simplicity — the ideal base for both leisure and business.',
     image: pic5,
@@ -26,16 +27,16 @@ const ROOMS = [
       { icon: 'bi-briefcase', label: 'Work Desk' },
     ],
     pricing: {
-      bedBreakfast: 4000,
-      halfBoard: 5500,
-      fullBoard: 6500,
+      bedBreakfast: 5000,
+      halfBoard: 6500,
+      fullBoard: 7500,
     },
   },
   {
     id: 2,
     name: 'Deluxe Single Room',
     available: 5,
-    startingPrice: 5200,
+    startingPrice: 5000,
     description:
       'Elevated living with a private balcony and resort panoramas. Perfect for those who seek a little more indulgence.',
     image: pic15,
@@ -47,9 +48,9 @@ const ROOMS = [
       { icon: 'bi-bell', label: 'Room Service' },
     ],
     pricing: {
-      bedBreakfast: 5200,
-      halfBoard: 6200,
-      fullBoard: 7500,
+      bedBreakfast: 5000,
+      halfBoard: 6000,
+      fullBoard: 7300,
     },
   },
   {
@@ -77,7 +78,7 @@ const ROOMS = [
     id: 4,
     name: 'Superior Single Room',
     available: 6,
-    startingPrice: 6200,
+    startingPrice: 8000,
     description:
       'An exceptional sanctuary featuring luxury bedding, a premium mini bar, and an array of curated amenities for the discerning traveller.',
     image: room2,
@@ -89,9 +90,9 @@ const ROOMS = [
       { icon: 'bi-briefcase', label: 'Work Desk' },
     ],
     pricing: {
-      bedBreakfast: 6200,
-      halfBoard: 7500,
-      fullBoard: 8500,
+      bedBreakfast: 8000,
+      halfBoard: 9300,
+      fullBoard: 10300,
     },
   },
 ];
@@ -129,90 +130,113 @@ const scaleIn = {
 
 /* ─────────────────────────── AVAILABILITY BADGE ─────────────────────────── */
 
-const AvailabilityBadge = ({ count }) => (
-  <span style={styles.badge}>
-    <i className="bi bi-check-circle-fill" style={{ marginRight: 5, color: '#f80808' }} />
-    {count} {count === 1 ? 'Room' : 'Rooms'} Available
-  </span>
-);
+const AvailabilityBadge = ({ count, loading }) => {
+  if (loading) {
+    return (
+      <span style={{ ...styles.badge, background: 'rgba(180,180,180,0.12)', borderColor: 'rgba(180,180,180,0.2)', color: '#aaa', letterSpacing: 0 }}>
+        <i className="bi bi-hourglass-split" style={{ marginRight: 5, animation: 'spin 1.2s linear infinite' }} />
+        Checking…
+      </span>
+    );
+  }
+  if (count <= 0) {
+    return (
+      <span style={{ ...styles.badge, background: 'rgba(150,150,150,0.18)', borderColor: 'rgba(150,150,150,0.35)', color: '#555' }}>
+        <i className="bi bi-x-circle-fill" style={{ marginRight: 5, color: '#888' }} />
+        No Rooms Available
+      </span>
+    );
+  }
+  return (
+    <span style={styles.badge}>
+      <i className="bi bi-check-circle-fill" style={{ marginRight: 5, color: '#f80808' }} />
+      {count} {count === 1 ? 'Room' : 'Rooms'} Available
+    </span>
+  );
+};
 
 /* ─────────────────────────── ROOM CARD ─────────────────────────── */
 
-const RoomCard = ({ room, onViewDetails, onBookNow }) => (
-  <motion.div
-    style={styles.swiperCard}
-    whileHover={{ y: -8, boxShadow: '0 32px 60px rgba(0,0,0,0.45), 0 0 0 1px rgba(212,175,55,0.25)' }}
-    transition={{ duration: 0.35, ease: 'easeOut' }}
-    role="article"
-    aria-label={room.name}
-  >
-    {/* Image */}
-    <div style={{ overflow: 'hidden', borderRadius: '20px 20px 0 0', position: 'relative', height: 220 }}>
-      <motion.img
-        src={room.image}
-        alt={room.name}
-        style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
-        whileHover={{ scale: 1.08 }}
-        transition={{ duration: 0.55, ease: 'easeOut' }}
-      />
-      <div style={styles.cardImgOverlay} />
-      <div style={{ position: 'absolute', top: 14, right: 14 }}>
-        <AvailabilityBadge count={room.available} />
-      </div>
-    </div>
-
-    {/* Body */}
-    <div style={styles.swiperCardBody}>
-      <h3 style={styles.cardTitle}>{room.name}</h3>
-      <p style={styles.cardDesc}>{room.description}</p>
-
-      <div style={styles.priceRow}>
-        <div>
-          <span style={styles.fromLabel}>From</span>
-          <span style={styles.priceTag}>KES {room.startingPrice.toLocaleString()}</span>
-          <span style={styles.perNight}>/night</span>
+const RoomCard = ({ room, onViewDetails, liveCount, loading }) => {
+  const soldOut = !loading && liveCount <= 0;
+  return (
+    <motion.div
+      style={styles.swiperCard}
+      whileHover={{ y: -8, boxShadow: '0 32px 60px rgba(0,0,0,0.45), 0 0 0 1px rgba(212,175,55,0.25)' }}
+      transition={{ duration: 0.35, ease: 'easeOut' }}
+      role="article"
+      aria-label={room.name}
+    >
+      {/* Image */}
+      <div style={{ overflow: 'hidden', borderRadius: '20px 20px 0 0', position: 'relative', height: 220 }}>
+        <motion.img
+          src={room.image}
+          alt={room.name}
+          style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
+          whileHover={{ scale: 1.08 }}
+          transition={{ duration: 0.55, ease: 'easeOut' }}
+        />
+        <div style={styles.cardImgOverlay} />
+        <div style={{ position: 'absolute', top: 14, right: 14 }}>
+          <AvailabilityBadge count={liveCount} loading={loading} />
         </div>
       </div>
 
-      {/* Action buttons row */}
-      <div style={{ display: 'flex', gap: 10 }}>
-        <motion.button
-          whileHover={{ scale: 1.03, boxShadow: '0 8px 24px rgba(150, 140, 122, 0.38)' }}
-          whileTap={{ scale: 0.97 }}
-          style={{ ...styles.viewDetailsBtn, flex: 1 }}
-          onClick={() => onViewDetails(room)}
-          aria-label={`View details for ${room.name}`}
-        >
-          <span>View Details</span>
-          <i className="bi bi-arrow-right" style={{ marginLeft: 8 }} />
-        </motion.button>
+      {/* Body */}
+      <div style={styles.swiperCardBody}>
+        <h3 style={styles.cardTitle}>{room.name}</h3>
+        <p style={styles.cardDesc}>{room.description}</p>
 
-        <motion.button
-          whileHover={{ scale: 1.03, boxShadow: '0 8px 24px rgba(15,143,70,0.38)' }}
-          whileTap={{ scale: 0.97 }}
-          style={{ ...styles.bookNowBtn, flex: 1 }}
-          onClick={() => onBookNow(room)}
-          aria-label={`Book ${room.name} now`}
-        >
-          <span>Book Now</span>
-          <i className="bi bi-calendar-check" style={{ marginLeft: 8 }} />
-        </motion.button>
+        <div style={styles.priceRow}>
+          <div>
+            <span style={styles.fromLabel}>From</span>
+            <span style={styles.priceTag}>KES {room.startingPrice.toLocaleString()}</span>
+            <span style={styles.perNight}>/night</span>
+          </div>
+        </div>
+
+        {/* Action button */}
+        <div style={{ display: 'flex', marginTop: 8 }}>
+          {soldOut ? (
+            <div style={{ ...styles.viewDetailsBtn, opacity: 0.45, cursor: 'not-allowed', pointerEvents: 'none', color: '#888', borderColor: 'rgba(150,150,150,0.3)', background: 'rgba(150,150,150,0.04)' }}>
+              <span>Fully Booked</span>
+              <i className="bi bi-slash-circle" style={{ marginLeft: 8 }} />
+            </div>
+          ) : (
+            <motion.button
+              whileHover={{
+                scale: 1.02,
+                background: 'linear-gradient(135deg, #C6A355 0%, #F58220 100%)',
+                color: '#ffffff',
+                boxShadow: '0 8px 24px rgba(198, 163, 85, 0.35)',
+              }}
+              whileTap={{ scale: 0.98 }}
+              style={styles.viewDetailsBtn}
+              onClick={() => onViewDetails(room)}
+              aria-label={`View details for ${room.name}`}
+            >
+              <span>View Details</span>
+              <i className="bi bi-arrow-right" style={{ marginLeft: 8 }} />
+            </motion.button>
+          )}
+        </div>
       </div>
-    </div>
-  </motion.div>
-);
+    </motion.div>
+  );
+};
 
 /* ─────────────────────────── ROOM DETAIL MODAL ─────────────────────────── */
 
-const RoomModal = ({ room, visible, onClose }) => {
+const RoomModal = ({ room, visible, onClose, liveCount }) => {
   if (!room) return null;
+  const soldOut = liveCount <= 0;
   return (
     <Modal
       open={visible}
       onCancel={onClose}
       footer={null}
       width="min(90vw, 780px)"
-      styles={{ body: { padding: 0, overflow: 'hidden' }, mask: { backdropFilter: 'blur(6px)', background: 'rgba(0,0,0,0.65)' } }}
+      styles={{ body: { padding: 0, overflow: 'visible' }, mask: { backdropFilter: 'blur(6px)', background: 'rgba(0,0,0,0.65)' } }}
       centered
       className="shanvilla-room-modal"
       closeIcon={
@@ -231,7 +255,7 @@ const RoomModal = ({ room, visible, onClose }) => {
             initial="hidden"
             animate="visible"
             exit="exit"
-            style={{ borderRadius: 24, overflow: 'hidden', background: 'linear-gradient(160deg, #FFF1DD 0%, #FAD7A0 100%)' }}
+            style={{ borderRadius: 24, overflowY: 'auto', maxHeight: '85vh', background: 'linear-gradient(160deg, #FFF1DD 0%, #FAD7A0 100%)' }}
           >
             {/* Hero Image */}
             <div style={{ position: 'relative', height: 'clamp(200px, 40vw, 340px)', overflow: 'hidden' }}>
@@ -243,7 +267,7 @@ const RoomModal = ({ room, visible, onClose }) => {
               <div style={styles.modalHeroOverlay} />
               <div style={{ position: 'absolute', bottom: 24, left: 28 }}>
                 <div style={styles.modalRoomBadge}>
-                  <AvailabilityBadge count={room.available} />
+                  <AvailabilityBadge count={liveCount} />
                 </div>
                 <h2 style={styles.modalTitle}>{room.name}</h2>
                 <div style={{ display: 'flex', alignItems: 'baseline', gap: 6 }}>
@@ -290,24 +314,30 @@ const RoomModal = ({ room, visible, onClose }) => {
 
               {/* Actions */}
               <div style={{ display: 'flex', justifyContent: 'center', marginTop: 32, width: '100%' }}>
+                {soldOut ? (
+                  <div style={{ ...styles.modalBookBtn, background: '#ccc', cursor: 'not-allowed', opacity: 0.6, textAlign: 'center' }}>
+                    No Rooms Available
+                  </div>
+                ) : (
                   <motion.button
-                  whileHover={{
-                    scale: 1.03,
-                    background: 'linear-gradient(135deg, #1ab55a 0%, #0F8F46 100%)',
-                    boxShadow: '0 10px 30px rgba(15,143,70,0.35)',
-                  }}
-                  whileTap={{ scale: 0.97 }}
-                  style={styles.modalBookBtn}
-                  onClick={() => {
-                    onClose();
-                    setTimeout(() => {
-                      window.dispatchEvent(new CustomEvent('open-booking', { detail: { room } }));
-                    }, 300);
-                  }}
-                  aria-label="Book this room"
-                >
-                  Book Now 
-                </motion.button>
+                    whileHover={{
+                      scale: 1.03,
+                      background: 'linear-gradient(135deg, #e53e3e 0%, #c53030 100%)',
+                      boxShadow: '0 10px 30px rgba(197,48,48,0.45)',
+                    }}
+                    whileTap={{ scale: 0.97 }}
+                    style={styles.modalBookBtn}
+                    onClick={() => {
+                      onClose();
+                      setTimeout(() => {
+                        window.dispatchEvent(new CustomEvent('open-booking', { detail: { room } }));
+                      }, 300);
+                    }}
+                    aria-label="Book this room"
+                  >
+                    Book Now
+                  </motion.button>
+                )}
               </div>
             </div>
           </motion.div>
@@ -334,6 +364,7 @@ const LuxuryDivider = () => (
 const Rooms = () => {
   const [selectedRoom, setSelectedRoom] = useState(null);
   const [isModalVisible, setIsModalVisible] = useState(false);
+  const { availability, loading } = useRoomAvailability();
 
   const heroRef = useRef(null);
   const heroInView = useInView(heroRef, { once: true, margin: '-60px' });
@@ -346,10 +377,6 @@ const Rooms = () => {
   const handleModalClose = () => {
     setIsModalVisible(false);
     setSelectedRoom(null);
-  };
-
-  const handleBookNow = (room) => {
-    window.dispatchEvent(new CustomEvent('open-booking', { detail: { room } }));
   };
 
   return (
@@ -397,16 +424,30 @@ const Rooms = () => {
               transition={{ duration: 0.55, ease: [0.22, 1, 0.36, 1] }}
               style={{ display: 'flex', justifyContent: 'center' }}
             >
-              <RoomCard room={room} onViewDetails={showRoomModal} onBookNow={handleBookNow} />
+              <RoomCard
+                room={room}
+                liveCount={availability[room.id] ?? room.available}
+                loading={loading}
+                onViewDetails={showRoomModal}
+              />
             </motion.div>
           ))}
         </div>
       </div>
 
-      {/* ── Room Detail Modal ── */}
-      <RoomModal room={selectedRoom} visible={isModalVisible} onClose={handleModalClose} />
+      {/* -- Room Detail Modal -- */}
+      <RoomModal
+        room={selectedRoom}
+        visible={isModalVisible}
+        onClose={handleModalClose}
+        liveCount={selectedRoom ? (availability[selectedRoom.id] ?? 0) : 0}
+      />
 
       <style>{`
+        @keyframes spin {
+          from { transform: rotate(0deg); }
+          to   { transform: rotate(360deg); }
+        }
         /* Modal overrides */
         .shanvilla-room-modal .ant-modal-content {
           background: transparent !important;
@@ -415,6 +456,23 @@ const Rooms = () => {
           padding: 0 !important;
           overflow: hidden;
           max-width: 95vw !important;
+        }
+        /* Custom scrollbar for room details modal */
+        .shanvilla-room-modal ::-webkit-scrollbar {
+          width: 8px;
+        }
+        .shanvilla-room-modal ::-webkit-scrollbar-track {
+          background: rgba(198, 163, 85, 0.08);
+          border-radius: 10px;
+        }
+        .shanvilla-room-modal ::-webkit-scrollbar-thumb {
+          background: #C6A355;
+          border-radius: 10px;
+          border: 1px solid rgba(255, 255, 255, 0.45);
+          transition: background 0.3s ease;
+        }
+        .shanvilla-room-modal ::-webkit-scrollbar-thumb:hover {
+          background: #fa780e;
         }
         .shanvilla-room-modal .ant-modal-close {
           top: 14px !important;
@@ -567,16 +625,16 @@ const styles = {
     alignItems: 'center',
     justifyContent: 'center',
     width: '100%',
-    padding: '11px 0',
+    padding: '12px 0',
     borderRadius: 12,
-    background: 'linear-gradient(135deg, #7face0 0%, #5689c3 100%)',
-    color: '#ffffff',
+    background: 'rgba(198, 163, 85, 0.05)',
+    border: '1px solid rgba(198, 163, 85, 0.35)',
+    color: '#8B5E05',
     fontWeight: 700,
     fontSize: '0.9rem',
-    border: 'none',
     cursor: 'pointer',
     letterSpacing: '0.02em',
-    transition: 'all 0.25s ease',
+    transition: 'all 0.2s ease',
   },
 
   bookNowBtn: {

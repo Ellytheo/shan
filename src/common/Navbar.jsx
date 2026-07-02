@@ -192,9 +192,9 @@ const css = `
     white-space: nowrap;
   }
   .sv-nav__book-btn:hover {
+    background: linear-gradient(135deg, #e53e3e 0%, #c53030 100%);
     transform: translateY(-2px);
-    box-shadow: 0 8px 22px rgba(15,143,70,0.45);
-    opacity: 0.92;
+    box-shadow: 0 8px 22px rgba(197,48,48,0.45);
   }
   .sv-nav__book-btn:active { transform: scale(0.97); }
 
@@ -224,7 +224,10 @@ const css = `
     transition: opacity 0.2s;
     text-shadow: 0 1px 2px rgba(0,0,0,0.15);
   }
-  .sv-nav__drawer-book:hover { opacity: 0.88; }
+  .sv-nav__drawer-book:hover {
+    background: linear-gradient(135deg, #e53e3e 0%, #c53030 100%);
+    box-shadow: 0 6px 18px rgba(197,48,48,0.38);
+  }
 
   /* ── HAMBURGER ── */
   .sv-nav__hamburger {
@@ -462,95 +465,97 @@ const Navbar = () => {
 
 
   return (
-    <div className="sv-nav-wrap">
-      <nav className="sv-nav" aria-label="Main navigation">
-        <div className="sv-nav__inner">
+    <>
+      <div className="sv-nav-wrap">
+        <nav className="sv-nav" aria-label="Main navigation">
+          <div className="sv-nav__inner">
 
-          {/* ── LOGO ── */}
-          <a
-            className="sv-nav__logo"
-            href="/#home"
-            onClick={(e) => handleLinkClick(e, "home")}
-            aria-label="Shanvilla – go to home"
-          >
-            <img
-              className="sv-nav__logo-img"
-              src={logoImage}
-              alt="Shanvilla logo"
-            />
-          </a>
-
-          {/* ── DESKTOP LINKS ── */}
-          <div className="sv-nav__links" aria-label="Site sections">
-            {NAV_ITEMS.map(({ id, label }) => (
-              <a
-                key={id}
-                className={`sv-nav__link${active === id ? " sv-nav__link--active" : ""}`}
-                href={`/#${id}`}
-                onClick={(e) => handleLinkClick(e, id)}
-                aria-current={active === id ? "page" : undefined}
-              >
-                {label}
-              </a>
-            ))}
-            {/* Book CTA */}
-            <button
-              id="navbar-book-btn"
-              className="sv-nav__book-btn"
-              onClick={() => { setPreRoom(null); setBookingOpen(true); }}
-              aria-label="Open booking modal"
+            {/* ── LOGO ── */}
+            <a
+              className="sv-nav__logo"
+              href="/#home"
+              onClick={(e) => handleLinkClick(e, "home")}
+              aria-label="Shanvilla – go to home"
             >
-              <i className="bi bi-calendar-check" />
-              Book
+              <img
+                className="sv-nav__logo-img"
+                src={logoImage}
+                alt="Shanvilla logo"
+              />
+            </a>
+
+            {/* ── DESKTOP LINKS ── */}
+            <div className="sv-nav__links" aria-label="Site sections">
+              {NAV_ITEMS.map(({ id, label }) => (
+                <a
+                  key={id}
+                  className={`sv-nav__link${active === id ? " sv-nav__link--active" : ""}`}
+                  href={`/#${id}`}
+                  onClick={(e) => handleLinkClick(e, id)}
+                  aria-current={active === id ? "page" : undefined}
+                >
+                  {label}
+                </a>
+              ))}
+              {/* Book CTA */}
+              <button
+                id="navbar-book-btn"
+                className="sv-nav__book-btn"
+                onClick={() => { setPreRoom(null); setBookingOpen(true); }}
+                aria-label="Open booking modal"
+              >
+                <i className="bi bi-calendar-check" />
+                Book
+              </button>
+            </div>
+
+            {/* ── HAMBURGER ── */}
+            <button
+              type="button"
+              className="sv-nav__hamburger"
+              aria-label={open ? "Close menu" : "Open menu"}
+              aria-expanded={open}
+              aria-controls="sv-mobile-drawer"
+              onClick={() => setOpen((v) => !v)}
+            >
+              {open ? <IoCloseOutline /> : <IoMenuOutline />}
             </button>
           </div>
 
-          {/* ── HAMBURGER ── */}
-          <button
-            type="button"
-            className="sv-nav__hamburger"
-            aria-label={open ? "Close menu" : "Open menu"}
-            aria-expanded={open}
-            aria-controls="sv-mobile-drawer"
-            onClick={() => setOpen((v) => !v)}
+          {/* ── MOBILE DRAWER ── */}
+          <div
+            id="sv-mobile-drawer"
+            className={`sv-nav__drawer${open ? " sv-nav__drawer--open" : ""}`}
+            role="menu"
+            aria-hidden={!open}
           >
-            {open ? <IoCloseOutline /> : <IoMenuOutline />}
-          </button>
-        </div>
-
-        {/* ── MOBILE DRAWER ── */}
-        <div
-          id="sv-mobile-drawer"
-          className={`sv-nav__drawer${open ? " sv-nav__drawer--open" : ""}`}
-          role="menu"
-          aria-hidden={!open}
-        >
-          {NAV_ITEMS.map(({ id, label }) => (
-            <a
-              key={id}
-              className={`sv-nav__drawer-link${active === id ? " sv-nav__drawer-link--active" : ""}`}
-              href={`/#${id}`}
+            {NAV_ITEMS.map(({ id, label }) => (
+              <a
+                key={id}
+                className={`sv-nav__drawer-link${active === id ? " sv-nav__drawer-link--active" : ""}`}
+                href={`/#${id}`}
+                role="menuitem"
+                onClick={(e) => handleLinkClick(e, id)}
+                aria-current={active === id ? "page" : undefined}
+              >
+                <span className="sv-nav__drawer-dot" aria-hidden="true" />
+                {label}
+              </a>
+            ))}
+            {/* Mobile Book CTA */}
+            <button
+              id="mobile-book-btn"
+              className="sv-nav__drawer-book"
               role="menuitem"
-              onClick={(e) => handleLinkClick(e, id)}
-              aria-current={active === id ? "page" : undefined}
+              onClick={() => { setPreRoom(null); setBookingOpen(true); setOpen(false); }}
+              aria-label="Open booking modal"
             >
-              <span className="sv-nav__drawer-dot" aria-hidden="true" />
-              {label}
-            </a>
-          ))}
-          {/* Mobile Book CTA */}
-          <button
-            id="mobile-book-btn"
-            className="sv-nav__drawer-book"
-            role="menuitem"
-            onClick={() => { setPreRoom(null); setBookingOpen(true); setOpen(false); }}
-            aria-label="Open booking modal"
-          >
-            <i className="bi bi-calendar-check" />
-            Book Now
-          </button>
-        </div>
-      </nav>
+              <i className="bi bi-calendar-check" />
+              Book Now
+            </button>
+          </div>
+        </nav>
+      </div>
 
       {/* ── Centralized Booking Modal ── */}
       <BookingModal
@@ -558,7 +563,7 @@ const Navbar = () => {
         onClose={() => { setBookingOpen(false); setPreRoom(null); }}
         preRoom={preRoom}
       />
-    </div>
+    </>
   );
 };
 

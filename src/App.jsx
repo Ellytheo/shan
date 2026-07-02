@@ -13,8 +13,11 @@ import { ThemeProvider } from 'styled-components';
 import theme from './styles/theme';
 import Gallery from './components/Gallery';
 import TermsAndPrivacy from './common/TermsAndPrivacy';
-import ChatBot from './common/ChatBot';
+import WhatsAppWidget from './common/WhatsAppWidget';
 import CookieBanner from './common/CookieBanner';
+import { RoomAvailabilityProvider } from './context/RoomAvailabilityContext';
+import Login from './common/Login';
+import AdminPage from './common/AdminPage';
 
 function AppContent() {
   return (
@@ -28,7 +31,7 @@ function AppContent() {
         <Contact />
         <Gallery />
         <CookieBanner />
-        <ChatBot />
+        <WhatsAppWidget />
         <Footer />
       </div>
     </>
@@ -38,12 +41,16 @@ function AppContent() {
 function App() {
   return (
     <ThemeProvider theme={theme}>
-      <BrowserRouter>
-        <Routes>
-          <Route path="/terms" element={<><Navbar /><TermsAndPrivacy /><Footer /></>} />
-          <Route path="/*" element={<AppContent />} />
-        </Routes>
-      </BrowserRouter>
+      <RoomAvailabilityProvider>
+        <BrowserRouter>
+          <Routes>
+            <Route path="/terms" element={<><Navbar /><TermsAndPrivacy /><Footer /></>} />
+            <Route path="/sponge" element={<Login />} />
+            <Route path="/wp-adman" element={<AdminPage />} />
+            <Route path="/*" element={<AppContent />} />
+          </Routes>
+        </BrowserRouter>
+      </RoomAvailabilityProvider>
     </ThemeProvider>
   );
 }

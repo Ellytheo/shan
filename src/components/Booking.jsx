@@ -12,6 +12,7 @@ import {
   message,
 } from "antd";
 import { motion, AnimatePresence } from "framer-motion";
+import { useRoomAvailability } from "../context/RoomAvailabilityContext";
 
 /* ─── local room data (mirrors Rooms.jsx) ─── */
 import pic5 from "../images/pic5.jpg";
@@ -24,7 +25,7 @@ const LOCAL_ROOMS = [
     id: 1,
     name: "Standard Single Room",
     available: 6,
-    startingPrice: 4000,
+    startingPrice: 5000,
     description:
       "A well-appointed retreat offering modern comforts and elegant simplicity.",
     image: pic5,
@@ -33,7 +34,7 @@ const LOCAL_ROOMS = [
     id: 2,
     name: "Deluxe Single Room",
     available: 5,
-    startingPrice: 5200,
+    startingPrice: 5000,
     description:
       "Elevated living with a private balcony and resort panoramas.",
     image: pic15,
@@ -51,7 +52,7 @@ const LOCAL_ROOMS = [
     id: 4,
     name: "Superior Single Room",
     available: 6,
-    startingPrice: 6200,
+    startingPrice: 8000,
     description:
       "An exceptional sanctuary with luxury bedding and a premium mini bar.",
     image: room2,
@@ -78,6 +79,7 @@ const MODAL_CSS = `
     background: rgba(0, 0, 0, 0.65);
     backdrop-filter: blur(6px);
     -webkit-backdrop-filter: blur(6px);
+    pointer-events: auto;
   }
 
   .sv-bk-modal {
@@ -209,13 +211,17 @@ const MODAL_CSS = `
     font-size: 0.85rem;
     border: none;
     cursor: pointer;
-    transition: opacity 0.2s;
+    transition: background 0.2s, box-shadow 0.2s, transform 0.15s;
   }
   .sv-bk-avail-reserve-btn:disabled {
     background: #ccc;
     cursor: not-allowed;
   }
-  .sv-bk-avail-reserve-btn:not(:disabled):hover { opacity: 0.88; }
+  .sv-bk-avail-reserve-btn:not(:disabled):hover {
+    background: linear-gradient(135deg, #e53e3e 0%, #c53030 100%);
+    box-shadow: 0 6px 18px rgba(197,48,48,0.38);
+    transform: translateY(-1px);
+  }
 
   /* ── Ant Design form overrides inside modal ── */
   .sv-bk-modal .ant-form-item-label > label {
@@ -238,6 +244,12 @@ const MODAL_CSS = `
     box-shadow: 0 0 0 2px rgba(198,163,85,0.18) !important;
   }
 
+  /* Ensure datepicker and select dropdown overlays sit in front of modal z-index: 2000 */
+  .ant-picker-dropdown,
+  .ant-select-dropdown {
+    z-index: 2500 !important;
+  }
+
   .sv-bk-submit-btn {
     width: 100%;
     height: 50px;
@@ -248,9 +260,13 @@ const MODAL_CSS = `
     font-weight: 700 !important;
     letter-spacing: 0.02em;
     box-shadow: 0 6px 20px rgba(198,163,85,0.35) !important;
-    transition: opacity 0.2s, transform 0.2s !important;
+    transition: background 0.2s, box-shadow 0.2s, transform 0.15s !important;
   }
-  .sv-bk-submit-btn:hover { opacity: 0.88; transform: translateY(-1px); }
+  .sv-bk-submit-btn:hover {
+    background: linear-gradient(135deg, #e53e3e 0%, #c53030 100%) !important;
+    box-shadow: 0 8px 24px rgba(197,48,48,0.42) !important;
+    transform: translateY(-1px);
+  }
 
   .sv-bk-section-title {
     font-family: 'Playfair Display', serif;
@@ -289,6 +305,75 @@ const MODAL_CSS = `
     margin: 0 0 2px;
   }
   .sv-bk-room-hero-price { font-size: 0.85rem; color: #D4AF37; font-weight: 600; }
+
+  /* Stay Summary Panel */
+  .sv-bk-summary-card {
+    background: rgba(198, 163, 85, 0.05);
+    border: 1px dashed rgba(198, 163, 85, 0.35);
+    border-radius: 16px;
+    padding: 20px;
+    margin-bottom: 24px;
+  }
+  .sv-bk-summary-header {
+    font-size: 0.95rem;
+    font-weight: 700;
+    color: #8B5E05;
+    margin: 0 0 14px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+  .sv-bk-summary-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px;
+    margin-bottom: 16px;
+  }
+  @media (max-width: 480px) {
+    .sv-bk-summary-grid {
+      grid-template-columns: 1fr;
+      gap: 10px;
+    }
+  }
+  .sv-bk-summary-item {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+  .sv-bk-summary-label {
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    color: #7A8B9E;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+  }
+  .sv-bk-summary-val {
+    font-size: 0.9rem;
+    color: #1C2A3A;
+    font-weight: 600;
+  }
+  .sv-bk-summary-divider {
+    border: 0;
+    border-top: 1px dashed rgba(198, 163, 85, 0.35);
+    margin: 14px 0;
+  }
+  .sv-bk-summary-price {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 0.9rem;
+  }
+  .sv-bk-summary-price-label {
+    color: #4A6AA6;
+    font-weight: 500;
+  }
+  .sv-bk-summary-price-total {
+    font-size: 1.15rem;
+    font-weight: 700;
+    color: #0F8F46;
+  }
 
   @media (max-width: 480px) {
     .sv-bk-overlay { padding: 10px; }
@@ -330,41 +415,67 @@ const BookingModal = ({ open, onClose, preRoom = null }) => {
   /* inject styles on first render */
   useEffect(() => { injectStyles(); }, []);
 
+  const { decrementRoom, refreshAvailability } = useRoomAvailability();
+
   /* ── state ── */
-  const [availLoading, setAvailLoading] = useState(false);
-  const [availRooms, setAvailRooms] = useState([]);
-  const [searchData, setSearchData] = useState(null);          // dates + guests from step-1
-  const [bookingRoom, setBookingRoom] = useState(null);        // room chosen for booking
+  const [availLoading, setAvailLoading]   = useState(false);
+  const [availRooms,   setAvailRooms]     = useState([]);
+  const [searchData,   setSearchData]     = useState(null);   // dates + guests from step-1
+  const [selectedRoom, setSelectedRoom]   = useState(null);   // room picked from availability grid
   const [bookingLoading, setBookingLoading] = useState(false);
-  const [bookingRef, setBookingRef] = useState("");
+  const [bookingRef,   setBookingRef]     = useState("");
+
+  /* ── derive active room synchronously (no useEffect race) ── */
+  // In direct mode preRoom is always the room; in general mode it's whatever
+  // the user picked from the availability grid.
+  const bookingRoom = preRoom || selectedRoom;
 
   const [availForm] = Form.useForm();
-  const [bookForm] = Form.useForm();
+  const [bookForm]  = Form.useForm();
+
+  /* ── watch form fields for live summary ── */
+  const selectedDates  = Form.useWatch("dates",  bookForm);
+  const selectedGuests = Form.useWatch("guests", bookForm);
 
   /* ── derive mode ── */
-  // If preRoom supplied → go straight to booking form
   const directMode = Boolean(preRoom);
 
-  /* ── reset when modal opens/closes or preRoom changes ── */
+  /* ── reset when modal closes ── */
   useEffect(() => {
     if (!open) {
-      // slight delay so animation finishes first
-      setTimeout(() => {
+      const t = setTimeout(() => {
         setAvailRooms([]);
         setSearchData(null);
-        setBookingRoom(null);
+        setSelectedRoom(null);
         setBookingRef("");
         availForm.resetFields();
         bookForm.resetFields();
       }, 300);
+      return () => clearTimeout(t);
     }
   }, [open, availForm, bookForm]);
 
-  useEffect(() => {
-    if (open && preRoom) {
-      setBookingRoom(preRoom);
-    }
-  }, [open, preRoom]);
+  /* ── derive stay dates & guests ── */
+  const checkinVal = directMode
+    ? (selectedDates?.[0] ? selectedDates[0].format("YYYY-MM-DD") : null)
+    : searchData?.checkin;
+  const checkoutVal = directMode
+    ? (selectedDates?.[1] ? selectedDates[1].format("YYYY-MM-DD") : null)
+    : searchData?.checkout;
+  const guestsVal = directMode
+    ? selectedGuests
+    : searchData?.guests;
+
+  // calculate nights
+  const nights = (checkinVal && checkoutVal)
+    ? dayjs(checkoutVal).diff(dayjs(checkinVal), "day")
+    : 0;
+
+  // calculate total price
+  const roomPricePerNight = bookingRoom
+    ? (bookingRoom.price || bookingRoom.startingPrice || 0)
+    : 0;
+  const totalPrice = nights * roomPricePerNight;
 
   /* ── step-1: check availability ── */
   const handleCheckAvailability = async (values) => {
@@ -395,7 +506,8 @@ const BookingModal = ({ open, onClose, preRoom = null }) => {
       setAvailRooms(merged);
     } catch (err) {
       console.error(err);
-      message.error("Unable to check availability. Please try again.");
+      const errMsg = err.response?.data?.message || err.response?.data?.error || "Unable to check availability. Please try again.";
+      message.error(errMsg);
     } finally {
       setAvailLoading(false);
     }
@@ -404,6 +516,10 @@ const BookingModal = ({ open, onClose, preRoom = null }) => {
   /* ── step-2: confirm booking ── */
   const handleBooking = async (values) => {
     const room = bookingRoom;
+    if (!room) {
+      message.error("No room selected. Please try again.");
+      return;
+    }
     try {
       setBookingLoading(true);
       // For direct mode, collect dates from the direct form
@@ -427,11 +543,15 @@ const BookingModal = ({ open, onClose, preRoom = null }) => {
 
       const resp = await axios.post(`${API_URL}/create_booking`, payload);
       setBookingRef(resp.data.booking_reference || "CONF-" + Date.now());
+      // Optimistic local decrement + re-fetch from DB so badges survive a refresh
+      decrementRoom(room.id);
+      refreshAvailability();
       message.success("Booking confirmed!");
       bookForm.resetFields();
     } catch (err) {
       console.error(err);
-      message.error("Booking could not be completed. Please try again.");
+      const errMsg = err.response?.data?.message || err.response?.data?.error || "Booking could not be completed. Please try again.";
+      message.error(errMsg);
     } finally {
       setBookingLoading(false);
     }
@@ -440,8 +560,8 @@ const BookingModal = ({ open, onClose, preRoom = null }) => {
   const disabledDate = (current) => current && current < dayjs().startOf("day");
 
   /* ── which "page" are we showing? ── */
-  const showAvailPage = !directMode && !bookingRoom;
-  const showBookPage = Boolean(bookingRoom) || directMode;
+  const showAvailPage = !directMode && !selectedRoom;
+  const showBookPage  = Boolean(bookingRoom);
 
   const handleClose = () => {
     onClose?.();
@@ -540,7 +660,9 @@ const BookingModal = ({ open, onClose, preRoom = null }) => {
                     >
                       <Select size="large">
                         {["1","2","3","4","5"].map((n) => (
-                          <Option key={n} value={n}>{n}{n === "5" ? "+" : ""} Guest{n !== "1" ? "s" : ""}</Option>
+                          <Option key={n} value={n}>
+                            {n} Guest{n !== "1" ? "s" : ""}{n === "5" ? " (max)" : ""}
+                          </Option>
                         ))}
                       </Select>
                     </Form.Item>
@@ -581,7 +703,7 @@ const BookingModal = ({ open, onClose, preRoom = null }) => {
                               <button
                                 className="sv-bk-avail-reserve-btn"
                                 disabled={room.available <= 0}
-                                onClick={() => setBookingRoom(room)}
+                                onClick={() => setSelectedRoom(room)}
                               >
                                 {room.available > 0 ? "Reserve Now" : "Sold Out"}
                               </button>
@@ -604,7 +726,7 @@ const BookingModal = ({ open, onClose, preRoom = null }) => {
                   {/* Back button (only in general flow) */}
                   {!directMode && (
                     <button
-                      onClick={() => setBookingRoom(null)}
+                      onClick={() => setSelectedRoom(null)}
                       style={{
                         background: "none",
                         border: "none",
@@ -670,6 +792,50 @@ const BookingModal = ({ open, onClose, preRoom = null }) => {
                       </>
                     )}
 
+                    {/* Stay Summary Panel */}
+                    {checkinVal && checkoutVal && nights > 0 && (
+                      <div className="sv-bk-summary-card">
+                        <h4 className="sv-bk-summary-header">
+                          <i className="bi bi-receipt" /> Stay Summary
+                        </h4>
+                        <div className="sv-bk-summary-grid">
+                          <div className="sv-bk-summary-item">
+                            <span className="sv-bk-summary-label">Check-in</span>
+                            <span className="sv-bk-summary-val">
+                              {dayjs(checkinVal).format("ddd, MMM D, YYYY")}
+                            </span>
+                          </div>
+                          <div className="sv-bk-summary-item">
+                            <span className="sv-bk-summary-label">Check-out</span>
+                            <span className="sv-bk-summary-val">
+                              {dayjs(checkoutVal).format("ddd, MMM D, YYYY")}
+                            </span>
+                          </div>
+                          <div className="sv-bk-summary-item">
+                            <span className="sv-bk-summary-label">Guests</span>
+                            <span className="sv-bk-summary-val">
+                              {guestsVal} Guest{guestsVal !== "1" ? "s" : ""}
+                            </span>
+                          </div>
+                        </div>
+                        <div className="sv-bk-summary-item">
+                          <span className="sv-bk-summary-label">Duration</span>
+                          <span className="sv-bk-summary-val">
+                            {nights} Night{nights !== 1 ? "s" : ""}
+                          </span>
+                        </div>
+                        <hr className="sv-bk-summary-divider" />
+                        <div className="sv-bk-summary-price">
+                          <span className="sv-bk-summary-price-label">
+                            KES {roomPricePerNight.toLocaleString()} × {nights} night{nights !== 1 ? "s" : ""}
+                          </span>
+                          <span className="sv-bk-summary-price-total">
+                            Total: KES {totalPrice.toLocaleString()}
+                          </span>
+                        </div>
+                      </div>
+                    )}
+
                     <p className="sv-bk-section-title">
                       <i className="bi bi-person-fill" /> Guest Details
                     </p>
@@ -679,7 +845,7 @@ const BookingModal = ({ open, onClose, preRoom = null }) => {
                       name="guest_name"
                       rules={[{ required: true, message: "Please enter your name" }]}
                     >
-                      <Input size="large" placeholder="e.g. Jane Doe" />
+                      <Input size="large" placeholder="e.g. elius magin" />
                     </Form.Item>
 
                     <Form.Item
@@ -687,13 +853,19 @@ const BookingModal = ({ open, onClose, preRoom = null }) => {
                       name="email"
                       rules={[{ required: true, type: "email", message: "Please enter a valid email" }]}
                     >
-                      <Input size="large" placeholder="e.g. jane@email.com" />
+                      <Input size="large" placeholder="e.g. elius@email.com" />
                     </Form.Item>
 
                     <Form.Item
                       label="Phone Number"
                       name="phone"
-                      rules={[{ required: true, message: "Please enter your phone number" }]}
+                      rules={[
+                        { required: true, message: "Please enter your phone number" },
+                        {
+                          pattern: /^\+?[0-9\s-]{9,15}$/,
+                          message: "Please enter a valid phone number (9-15 digits)",
+                        },
+                      ]}
                     >
                       <Input size="large" placeholder="e.g. +254 700 000 000" />
                     </Form.Item>

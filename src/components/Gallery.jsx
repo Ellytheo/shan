@@ -1,7 +1,4 @@
 
-import img2 from "../images/dis2.jpg";
-import img3 from "../images/dis3.jpg";
-import img5 from "../images/shan1.jpg";
 import img6 from "../images/shan2.jpg";
 import pic1 from "../images/pic1.jpg";
 import pic2 from "../images/pic2.jpg";
@@ -22,14 +19,13 @@ import pic16 from "../images/pic16.jpg";
 import pic17 from "../images/pic17.jpg";
 import pic18 from "../images/pic18.jpg";
 import pic19 from "../images/pic19.jpg";
-import pic20 from "../images/pic20.jpg";
 
 const images = [
-  img2, img3, img5, img6,
+  img6,
   pic1, pic2, pic3, pic4, pic5,
   pic6, pic7, pic8, pic9, pic10,
   pic11, pic12, pic13, pic14, pic15,
-  pic16, pic17, pic18, pic19, pic20,
+  pic16, pic17, pic18, pic19, 
 ];
 
 const Gallery = () => {
