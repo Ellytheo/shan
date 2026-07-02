@@ -2,7 +2,6 @@ import './App.css';
 import Home from './components/Home';
 import About from './components/About';
 import Contact from './components/Contact';
-import Booking from './components/Booking';
 import Amenities from './components/Amenities';
 import Rooms from './components/Rooms';
 import Navbar from './common/Navbar';
@@ -28,7 +27,6 @@ function AppContent() {
         <Amenities />
         <Contact />
         <Gallery />
-        <Booking/>
         <CookieBanner />
         <ChatBot />
         <Footer />

@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState } from "react";
 import { IoCloseOutline, IoMenuOutline } from "react-icons/io5";
 import logoImage from "../images/logo.png";
+import BookingModal from "../components/Booking";
+import 'bootstrap-icons/font/bootstrap-icons.css';
 
 // ─── styles (plain JS object, injected as <style> tag) ───────────────────────
 const css = `
@@ -169,6 +171,61 @@ const css = `
     box-shadow: 0 0 8px rgba(15,143,70,0.3);
   }
 
+  /* ── BOOK CTA BUTTON ── */
+  .sv-nav__book-btn {
+    font-family: 'Playfair Display', serif;
+    font-size: 15px;
+    font-weight: 700;
+    color: #fff;
+    background: linear-gradient(135deg, #0F8F46 0%, #1ab55a 100%);
+    border: none;
+    padding: 8px 20px;
+    border-radius: 30px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-left: 6px;
+    box-shadow: 0 4px 14px rgba(15,143,70,0.35);
+    transition: transform 0.2s ease, box-shadow 0.2s ease, opacity 0.2s;
+    flex-shrink: 0;
+    white-space: nowrap;
+  }
+  .sv-nav__book-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 22px rgba(15,143,70,0.45);
+    opacity: 0.92;
+  }
+  .sv-nav__book-btn:active { transform: scale(0.97); }
+
+  @media (max-width: 768px) {
+    .sv-nav__book-btn { display: none; }
+  }
+
+  /* ── MOBILE BOOK LINK ── */
+  .sv-nav__drawer-book {
+    font-family: 'Playfair Display', serif;
+    font-size: 22px;
+    font-weight: 700;
+    color: #fff;
+    background: linear-gradient(135deg, #0F8F46 0%, #1ab55a 100%);
+    border: none;
+    text-decoration: none;
+    padding: 12px 8px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    border-radius: 12px;
+    margin-top: 6px;
+    cursor: pointer;
+    width: 100%;
+    justify-content: flex-start;
+    box-shadow: 0 4px 14px rgba(15,143,70,0.28);
+    transition: opacity 0.2s;
+    text-shadow: 0 1px 2px rgba(0,0,0,0.15);
+  }
+  .sv-nav__drawer-book:hover { opacity: 0.88; }
+
   /* ── HAMBURGER ── */
   .sv-nav__hamburger {
     display: none;
@@ -311,11 +368,14 @@ const NAV_ITEMS = [
   { id: "contact",   label: "Contact" },
   { id: "gallery",   label: "Gallery" },
 ];
+// Note: "booking" is intentionally removed — it now lives in the modal
 
 // ─── component ───────────────────────────────────────────────────────────────
 const Navbar = () => {
   const [open, setOpen] = useState(false);
   const [active, setActive] = useState("home");
+  const [bookingOpen, setBookingOpen] = useState(false);
+  const [preRoom, setPreRoom] = useState(null);
   const styleRef = useRef(null);
 
   // inject styles once
@@ -330,6 +390,16 @@ const Navbar = () => {
     return () => {
       // leave style tag in place to avoid flash on HMR
     };
+  }, []);
+
+  // Listen for open-booking custom events (dispatched by room cards / modals)
+  useEffect(() => {
+    const handler = (e) => {
+      setPreRoom(e.detail?.room || null);
+      setBookingOpen(true);
+    };
+    window.addEventListener("open-booking", handler);
+    return () => window.removeEventListener("open-booking", handler);
   }, []);
 
   // helper to get dynamic navbar offset based on screen width
@@ -423,6 +493,16 @@ const Navbar = () => {
                 {label}
               </a>
             ))}
+            {/* Book CTA */}
+            <button
+              id="navbar-book-btn"
+              className="sv-nav__book-btn"
+              onClick={() => { setPreRoom(null); setBookingOpen(true); }}
+              aria-label="Open booking modal"
+            >
+              <i className="bi bi-calendar-check" />
+              Book
+            </button>
           </div>
 
           {/* ── HAMBURGER ── */}
@@ -458,8 +538,26 @@ const Navbar = () => {
               {label}
             </a>
           ))}
+          {/* Mobile Book CTA */}
+          <button
+            id="mobile-book-btn"
+            className="sv-nav__drawer-book"
+            role="menuitem"
+            onClick={() => { setPreRoom(null); setBookingOpen(true); setOpen(false); }}
+            aria-label="Open booking modal"
+          >
+            <i className="bi bi-calendar-check" />
+            Book Now
+          </button>
         </div>
       </nav>
+
+      {/* ── Centralized Booking Modal ── */}
+      <BookingModal
+        open={bookingOpen}
+        onClose={() => { setBookingOpen(false); setPreRoom(null); }}
+        preRoom={preRoom}
+      />
     </div>
   );
 };

@@ -138,7 +138,7 @@ const AvailabilityBadge = ({ count }) => (
 
 /* ─────────────────────────── ROOM CARD ─────────────────────────── */
 
-const RoomCard = ({ room, onViewDetails }) => (
+const RoomCard = ({ room, onViewDetails, onBookNow }) => (
   <motion.div
     style={styles.swiperCard}
     whileHover={{ y: -8, boxShadow: '0 32px 60px rgba(0,0,0,0.45), 0 0 0 1px rgba(212,175,55,0.25)' }}
@@ -174,16 +174,30 @@ const RoomCard = ({ room, onViewDetails }) => (
         </div>
       </div>
 
-      <motion.button
-        whileHover={{ scale: 1.03, boxShadow: '0 8px 24px rgba(150, 140, 122, 0.38)' }}
-        whileTap={{ scale: 0.97 }}
-        style={styles.viewDetailsBtn}
-        onClick={() => onViewDetails(room)}
-        aria-label={`View details for ${room.name}`}
-      >
-        <span>View Details</span>
-        <i className="bi bi-arrow-right" style={{ marginLeft: 8 }} />
-      </motion.button>
+      {/* Action buttons row */}
+      <div style={{ display: 'flex', gap: 10 }}>
+        <motion.button
+          whileHover={{ scale: 1.03, boxShadow: '0 8px 24px rgba(150, 140, 122, 0.38)' }}
+          whileTap={{ scale: 0.97 }}
+          style={{ ...styles.viewDetailsBtn, flex: 1 }}
+          onClick={() => onViewDetails(room)}
+          aria-label={`View details for ${room.name}`}
+        >
+          <span>View Details</span>
+          <i className="bi bi-arrow-right" style={{ marginLeft: 8 }} />
+        </motion.button>
+
+        <motion.button
+          whileHover={{ scale: 1.03, boxShadow: '0 8px 24px rgba(15,143,70,0.38)' }}
+          whileTap={{ scale: 0.97 }}
+          style={{ ...styles.bookNowBtn, flex: 1 }}
+          onClick={() => onBookNow(room)}
+          aria-label={`Book ${room.name} now`}
+        >
+          <span>Book Now</span>
+          <i className="bi bi-calendar-check" style={{ marginLeft: 8 }} />
+        </motion.button>
+      </div>
     </div>
   </motion.div>
 );
@@ -276,18 +290,19 @@ const RoomModal = ({ room, visible, onClose }) => {
 
               {/* Actions */}
               <div style={{ display: 'flex', justifyContent: 'center', marginTop: 32, width: '100%' }}>
-                <motion.button
+                  <motion.button
                   whileHover={{
                     scale: 1.03,
-                    background: 'linear-gradient(135deg, #FFC27B 0%, #F47A6A 100%)',
-                    boxShadow: '0 10px 30px rgba(244, 122, 106, 0.25)',
-                    textShadow: '0 0 18px rgba(255, 92, 92, 0.95)',
+                    background: 'linear-gradient(135deg, #1ab55a 0%, #0F8F46 100%)',
+                    boxShadow: '0 10px 30px rgba(15,143,70,0.35)',
                   }}
                   whileTap={{ scale: 0.97 }}
                   style={styles.modalBookBtn}
                   onClick={() => {
                     onClose();
-                    setTimeout(() => document.getElementById('booking')?.scrollIntoView({ behavior: 'smooth' }), 300);
+                    setTimeout(() => {
+                      window.dispatchEvent(new CustomEvent('open-booking', { detail: { room } }));
+                    }, 300);
                   }}
                   aria-label="Book this room"
                 >
@@ -331,6 +346,10 @@ const Rooms = () => {
   const handleModalClose = () => {
     setIsModalVisible(false);
     setSelectedRoom(null);
+  };
+
+  const handleBookNow = (room) => {
+    window.dispatchEvent(new CustomEvent('open-booking', { detail: { room } }));
   };
 
   return (
@@ -378,7 +397,7 @@ const Rooms = () => {
               transition={{ duration: 0.55, ease: [0.22, 1, 0.36, 1] }}
               style={{ display: 'flex', justifyContent: 'center' }}
             >
-              <RoomCard room={room} onViewDetails={showRoomModal} />
+              <RoomCard room={room} onViewDetails={showRoomModal} onBookNow={handleBookNow} />
             </motion.div>
           ))}
         </div>
@@ -558,6 +577,24 @@ const styles = {
     cursor: 'pointer',
     letterSpacing: '0.02em',
     transition: 'all 0.25s ease',
+  },
+
+  bookNowBtn: {
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    width: '100%',
+    padding: '11px 0',
+    borderRadius: 12,
+    background: 'linear-gradient(135deg, #0F8F46 0%, #1ab55a 100%)',
+    color: '#ffffff',
+    fontWeight: 700,
+    fontSize: '0.9rem',
+    border: 'none',
+    cursor: 'pointer',
+    letterSpacing: '0.02em',
+    transition: 'all 0.25s ease',
+    boxShadow: '0 4px 14px rgba(15,143,70,0.25)',
   },
 
   /* ─── Availability Badge ─── */
