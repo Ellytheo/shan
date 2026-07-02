@@ -103,10 +103,6 @@ const css = `
     }
   }
 
-  .sv-nav__logo:hover .sv-nav__logo-img {
-    transform: scale(1.05);
-    filter: drop-shadow(0 0 12px rgba(135,206,250,0.7)) drop-shadow(0 0 20px rgba(173,216,230,0.5));
-  }
 
   .sv-nav__logo-text {
     font-family: 'Playfair Display', serif;
@@ -164,15 +160,6 @@ const css = `
     transition: width 0.35s cubic-bezier(0.25, 0.8, 0.25, 1);
   }
 
-  .sv-nav__link:hover {
-    color: #0F8F46;
-    transform: translateY(-2px);
-  }
-
-  .sv-nav__link:hover::after {
-    width: 60%;
-  }
-
   .sv-nav__link--active {
     color: #0F8F46 !important;
   }
@@ -193,11 +180,6 @@ const css = `
     padding: 4px 8px;
     transition: color 0.3s ease, transform 0.2s ease;
     line-height: 1;
-  }
-
-  .sv-nav__hamburger:hover {
-    color: #F58220;
-    transform: scale(1.1);
   }
 
   @media (max-width: 768px) {
@@ -272,14 +254,10 @@ const css = `
 
   .sv-nav__drawer-link:last-child { border-bottom: none; }
 
-  .sv-nav__drawer-link:hover,
   .sv-nav__drawer-link--active {
-    color: #0F8F46;
-    padding-left: 14px;
-    background: rgba(15,143,70,0.05);
-  }
-
-  .sv-nav__drawer-link--active {
+    color: #0F8F46 !important;
+    padding-left: 14px !important;
+    background: rgba(15,143,70,0.05) !important;
     font-weight: 800;
   }
 
@@ -293,9 +271,34 @@ const css = `
     transition: opacity 0.2s ease;
   }
 
-  .sv-nav__drawer-link--active .sv-nav__drawer-dot,
-  .sv-nav__drawer-link:hover .sv-nav__drawer-dot {
-    opacity: 1;
+  .sv-nav__drawer-link--active .sv-nav__drawer-dot {
+    opacity: 1 !important;
+  }
+
+  @media (hover: hover) {
+    .sv-nav__logo:hover .sv-nav__logo-img {
+      transform: scale(1.05);
+      filter: drop-shadow(0 0 12px rgba(135,206,250,0.7)) drop-shadow(0 0 20px rgba(173,216,230,0.5));
+    }
+    .sv-nav__link:hover {
+      color: #0F8F46;
+      transform: translateY(-2px);
+    }
+    .sv-nav__link:hover::after {
+      width: 60%;
+    }
+    .sv-nav__hamburger:hover {
+      color: #F58220;
+      transform: scale(1.1);
+    }
+    .sv-nav__drawer-link:hover {
+      color: #0F8F46;
+      padding-left: 14px;
+      background: rgba(15,143,70,0.05);
+    }
+    .sv-nav__drawer-link:hover .sv-nav__drawer-dot {
+      opacity: 1;
+    }
   }
 `;
 
@@ -329,15 +332,32 @@ const Navbar = () => {
     };
   }, []);
 
+  // helper to get dynamic navbar offset based on screen width
+  const getNavbarHeight = () => {
+    if (window.innerWidth <= 480) return 60;
+    if (window.innerWidth <= 768) return 66;
+    return 78;
+  };
+
   // scroll spy
   useEffect(() => {
     const ids = NAV_ITEMS.map((i) => i.id);
     const handleScroll = () => {
-      const offset = window.scrollY + 90;
+      // Check if we've scrolled to the bottom of the page
+      const isAtBottom = window.innerHeight + window.scrollY >= document.documentElement.scrollHeight - 10;
+      if (isAtBottom) {
+        setActive(ids[ids.length - 1]);
+        return;
+      }
+
+      const navbarHeight = getNavbarHeight();
+      const offset = window.scrollY + navbarHeight + 15; // 15px buffer to guarantee section is active
       let current = ids[0];
       for (const id of ids) {
         const el = document.getElementById(id);
-        if (el && el.offsetTop <= offset) current = id;
+        if (el && el.offsetTop <= offset) {
+          current = id;
+        }
       }
       setActive(current);
     };
@@ -346,6 +366,30 @@ const Navbar = () => {
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
+  const handleLinkClick = (e, id) => {
+    if (window.location.pathname !== "/") {
+      // Allow default router navigation to homepage hash
+      return;
+    }
+    
+    e.preventDefault();
+
+    // Update url hash without refreshing the page
+    window.history.pushState(null, null, `/#${id}`);
+
+    const el = document.getElementById(id);
+    if (el) {
+      const navbarHeight = getNavbarHeight();
+      const elementPosition = el.getBoundingClientRect().top + window.scrollY;
+      const offsetPosition = elementPosition - navbarHeight;
+
+      window.scrollTo({
+        top: offsetPosition,
+        behavior: "smooth",
+      });
+    }
+  };
+
 
   return (
     <div className="sv-nav-wrap">
@@ -353,7 +397,12 @@ const Navbar = () => {
         <div className="sv-nav__inner">
 
           {/* ── LOGO ── */}
-          <a className="sv-nav__logo" href="/#home" aria-label="Shanvilla – go to home">
+          <a
+            className="sv-nav__logo"
+            href="/#home"
+            onClick={(e) => handleLinkClick(e, "home")}
+            aria-label="Shanvilla – go to home"
+          >
             <img
               className="sv-nav__logo-img"
               src={logoImage}
@@ -368,6 +417,7 @@ const Navbar = () => {
                 key={id}
                 className={`sv-nav__link${active === id ? " sv-nav__link--active" : ""}`}
                 href={`/#${id}`}
+                onClick={(e) => handleLinkClick(e, id)}
                 aria-current={active === id ? "page" : undefined}
               >
                 {label}
@@ -401,6 +451,7 @@ const Navbar = () => {
               className={`sv-nav__drawer-link${active === id ? " sv-nav__drawer-link--active" : ""}`}
               href={`/#${id}`}
               role="menuitem"
+              onClick={(e) => handleLinkClick(e, id)}
               aria-current={active === id ? "page" : undefined}
             >
               <span className="sv-nav__drawer-dot" aria-hidden="true" />

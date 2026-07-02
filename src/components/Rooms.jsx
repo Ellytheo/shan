@@ -4,8 +4,8 @@ import { motion, AnimatePresence, useInView } from 'framer-motion';
 import 'bootstrap-icons/font/bootstrap-icons.css';
 import pic5 from '../images/pic5.jpg';
 import pic15 from '../images/pic15.jpg';
-import room1 from '../images/room1.jpg';
-import room2 from '../images/room2.jpg';
+import room1 from '../images/standard.webp';
+import room2 from '../images/vip.webp';
 
 /* ─────────────────────────── DATA ─────────────────────────── */
 

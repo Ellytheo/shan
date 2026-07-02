@@ -10,7 +10,7 @@ lerna-debug.log*
 node_modules
 dist
 dist-ssr
-*.local
+*.local 
 
 # Editor directories and files
 .vscode/*
@@ -23,6 +23,6 @@ dist-ssr
 *.sln
 *.sw?
 # Ignore large local video
-/public/videos/shanvilla2.mp4
+
 
 .vercel

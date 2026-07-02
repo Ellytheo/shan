@@ -11,8 +11,20 @@ body {
   -moz-osx-font-smoothing: grayscale;
 }
 
-section[id], div[id] {
-  scroll-margin-top: 96px;
+#home, #about, #rooms, #amenities, #contact, #gallery {
+  scroll-margin-top: 78px;
+}
+
+@media (max-width: 768px) {
+  #home, #about, #rooms, #amenities, #contact, #gallery {
+    scroll-margin-top: 66px;
+  }
+}
+
+@media (max-width: 480px) {
+  #home, #about, #rooms, #amenities, #contact, #gallery {
+    scroll-margin-top: 60px;
+  }
 }
 
 code {
