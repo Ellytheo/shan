@@ -12,21 +12,34 @@ const Login = () => {
     setLoading(true);
 
     try {
-      const res = await axios.post('https://Shanvilla.pythonanywhere.com/login', {
+      const res = await axios.post('https://shanvilla.pythonanywhere.com/login', {
         username,
         password,
       });
 
       if (res.data.status === 'success') {
         localStorage.setItem('adminToken', 'logged-in');
+        localStorage.setItem('adminUsername', username);
         message.success('Welcome back, Admin!');
-        navigate('/wp-adman'); // 🔁 redirect to admin page
+        navigate('/wp-adman');
       } else {
         message.error(res.data.message || 'Invalid username or password');
       }
     } catch (err) {
       console.error(err);
-      message.error('Server error. Try again later.');
+      const serverMsg = err?.response?.data?.message;
+      const httpStatus = err?.response?.status;
+      const networkErr = err?.code === 'ERR_NETWORK';
+
+      if (networkErr) {
+        message.error('Network error — cannot reach the server.');
+      } else if (serverMsg) {
+        message.error(serverMsg);
+      } else if (httpStatus) {
+        message.error(`Server error ${httpStatus}. Try again later.`);
+      } else {
+        message.error('Unknown error. Try again later.');
+      }
     } finally {
       setLoading(false);
     }

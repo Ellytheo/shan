@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { Modal } from 'antd';
 import { motion, AnimatePresence, useInView } from 'framer-motion';
 import 'bootstrap-icons/font/bootstrap-icons.css';
@@ -7,6 +7,13 @@ import pic5 from '../images/pic5.jpg';
 import pic15 from '../images/pic15.jpg';
 import room1 from '../images/standard.webp';
 import room2 from '../images/vip.webp';
+
+const IMAGE_MAP = {
+  pic5: pic5,
+  pic15: pic15,
+  room1: room1,
+  room2: room2,
+};
 
 /* ─────────────────────────── DATA ─────────────────────────── */
 
@@ -362,12 +369,36 @@ const LuxuryDivider = () => (
 /* ─────────────────────────── MAIN COMPONENT ─────────────────────────── */
 
 const Rooms = () => {
+  const [rooms, setRooms] = useState([]);
   const [selectedRoom, setSelectedRoom] = useState(null);
   const [isModalVisible, setIsModalVisible] = useState(false);
   const { availability, loading } = useRoomAvailability();
 
   const heroRef = useRef(null);
   const heroInView = useInView(heroRef, { once: true, margin: '-60px' });
+
+  useEffect(() => {
+    const fetchRooms = async () => {
+      try {
+        const res = await fetch('https://shanvilla.pythonanywhere.com/api/rooms');
+        const data = await res.json();
+        if (data.status === 'success' && data.rooms && data.rooms.length > 0) {
+          const mapped = data.rooms.map(r => ({
+            ...r,
+            startingPrice: r.price,
+            image: IMAGE_MAP[r.image_url] || r.image_url,
+          }));
+          setRooms(mapped);
+        } else {
+          setRooms(ROOMS);
+        }
+      } catch (err) {
+        console.error("Error fetching rooms:", err);
+        setRooms(ROOMS);
+      }
+    };
+    fetchRooms();
+  }, []);
 
   const showRoomModal = (room) => {
     setSelectedRoom(room);
@@ -414,7 +445,7 @@ const Rooms = () => {
         </motion.div>
 
         <div style={{ display: 'grid', gap: 32, gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', marginTop: 20 }}>
-          {ROOMS.map((room) => (
+          {rooms.map((room) => (
             <motion.div
               key={room.id}
               variants={fadeUp}

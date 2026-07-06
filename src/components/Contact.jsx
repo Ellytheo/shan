@@ -23,7 +23,7 @@ const ContactSection = () => {
 
     try {
       const res = await axios.post(
-        'https://Shanvilla.pythonanywhere.com/submit_contact',
+        'https://shanvilla.pythonanywhere.com/submit_contact',
         formData,
         {
           headers: { 'Content-Type': 'multipart/form-data' },

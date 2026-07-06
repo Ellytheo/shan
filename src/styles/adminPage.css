@@ -1,0 +1,38 @@
+.sv-admin-table .ant-table {
+  background: transparent !important;
+}
+
+.sv-admin-table .ant-table-thead > tr > th {
+  background: rgba(15, 143, 70, 0.08) !important;
+  color: #0f8f46 !important;
+  font-weight: 700 !important;
+  border-bottom: 2px solid rgba(15, 143, 70, 0.15) !important;
+  font-family: 'Inter', sans-serif;
+}
+
+.sv-admin-table .ant-table-tbody > tr > td {
+  border-bottom: 1px solid rgba(198, 163, 85, 0.1) !important;
+  font-family: 'Inter', sans-serif;
+  font-size: 0.9rem;
+  color: #2d3748;
+  padding: 14px 16px !important;
+}
+
+.sv-admin-table .ant-table-tbody > tr:hover > td {
+  background: rgba(198, 163, 85, 0.05) !important;
+}
+
+.ant-tabs-tab-btn {
+  font-family: 'Playfair Display', serif !important;
+  font-weight: 600 !important;
+  font-size: 1.1rem !important;
+}
+
+.ant-tabs-tab-active .ant-tabs-tab-btn {
+  color: #0f8f46 !important;
+}
+
+.ant-tabs-ink-bar {
+  background: #0f8f46 !important;
+}
+

@@ -62,7 +62,7 @@ const LOCAL_ROOMS = [
 const { RangePicker } = DatePicker;
 const { Option } = Select;
 
-const API_URL = "https://Shanvilla.pythonanywhere.com";
+const API_URL = "https://shanvilla.pythonanywhere.com";
 
 /* ─── overlay / modal CSS injected once ─── */
 const MODAL_CSS = `
@@ -411,7 +411,7 @@ const modalVar = {
      onClose     {function} – called when user closes modal
      preRoom     {object|null} – if set, skips availability → direct booking
    ═══════════════════════════════════════════════════════════════════════════ */
-const BookingModal = ({ open, onClose, preRoom = null }) => {
+const BookingModal = ({ open, onClose, preRoom = null, createdBy = 'website' }) => {
   /* inject styles on first render */
   useEffect(() => { injectStyles(); }, []);
 
@@ -500,8 +500,6 @@ const BookingModal = ({ open, onClose, preRoom = null }) => {
 
       if (merged.length === 0) {
         message.info("No rooms available for the selected dates.");
-      } else {
-        message.success("Rooms loaded successfully!");
       }
       setAvailRooms(merged);
     } catch (err) {
@@ -539,6 +537,7 @@ const BookingModal = ({ open, onClose, preRoom = null }) => {
         checkin_date: checkin,
         checkout_date: checkout,
         guests,
+        created_by: createdBy,
       };
 
       const resp = await axios.post(`${API_URL}/create_booking`, payload);
