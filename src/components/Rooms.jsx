@@ -386,7 +386,7 @@ const Rooms = () => {
           const mapped = data.rooms.map(r => ({
             ...r,
             startingPrice: r.price,
-            image: IMAGE_MAP[r.image_url] || r.image_url,
+            image: IMAGE_MAP[r.image_url] || (r.image_url?.startsWith('/uploads/') ? 'https://shanvilla.pythonanywhere.com' + r.image_url : r.image_url),
           }));
           setRooms(mapped);
         } else {

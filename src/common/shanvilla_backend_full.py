@@ -5,21 +5,39 @@ from datetime import date, datetime
 from decimal import Decimal
 
 import pymysql
-from flask import Flask, jsonify, request
+from flask import Flask, jsonify, request, send_from_directory
 from flask_cors import CORS
 from werkzeug.security import check_password_hash, generate_password_hash
+from werkzeug.utils import secure_filename
+from PIL import Image
+import shutil
 
 app = Flask(__name__)
 CORS(app)
+
+# Upload Configuration
+BACKEND_DIR = os.path.dirname(os.path.abspath(__file__))
+# If running in local dev structure (src/common/), go up two levels.
+# If running on PythonAnywhere (flask_app.py in mysite/), put uploads next to the script.
+if os.path.basename(BACKEND_DIR) == 'common' and os.path.basename(os.path.dirname(BACKEND_DIR)) == 'src':
+    UPLOAD_FOLDER = os.path.abspath(os.path.join(BACKEND_DIR, '..', '..', 'uploads'))
+else:
+    UPLOAD_FOLDER = os.path.join(BACKEND_DIR, 'uploads')
+
+os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
+app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # Flask limit, we enforce 3MB on route level
+
 
 # Set DB_PASSWORD via the WSGI config file on PythonAnywhere (recommended),
 # OR replace the empty string below with your actual password before uploading.
 DB_CONFIG = {
     "host": os.environ.get("DB_HOST", "shanvilla.mysql.pythonanywhere-services.com"),
     "user": os.environ.get("DB_USER", "Shanvilla"),
-    "password": os.environ.get("DB_PASSWORD", "YOUR_MYSQL_PASSWORD_HERE"),
+    "password": os.environ.get("DB_PASSWORD", ""),
     "database": os.environ.get("DB_NAME", "Shanvilla$default"),
 }
+
 
 ACTIVE_BOOKING_STATUSES = ("pending", "confirmed", "checked_in")
 ALL_BOOKING_STATUSES = ("pending", "confirmed", "checked_in", "checked_out", "cancelled", "no_show")
@@ -240,29 +258,80 @@ def login():
     password = data.get("password")
 
     if not username or not password:
-        return jsonify({"status": "error", "message": "Missing credentials."}), 400
+        return jsonify({
+            "status": "error",
+            "message": "Missing credentials."
+        }), 400
 
     conn = None
+
     try:
         conn = get_connection()
+
         with conn.cursor() as cursor:
-            cursor.execute("SELECT id, username, password FROM users WHERE username = %s", (username,))
+            cursor.execute("""
+                SELECT
+                    id,
+                    username,
+                    password,
+                    status
+                FROM users
+                WHERE username = %s
+            """, (username,))
+
             user = cursor.fetchone()
 
-        if user and check_password_hash(user["password"], password):
+        # User not found
+        if not user:
             return jsonify({
-                "status": "success",
-                "message": "Login successful.",
-                "user": {"id": user["id"], "username": user["username"]},
-            }), 200
+                "status": "error",
+                "message": "Invalid username or password."
+            }), 401
 
-        return jsonify({"status": "error", "message": "Invalid username or password."}), 401
+        # Password incorrect
+        if not check_password_hash(user["password"], password):
+            return jsonify({
+                "status": "error",
+                "message": "Invalid username or password."
+            }), 401
+
+        # Account disabled
+        if user["status"] == "Disabled":
+            return jsonify({
+                "status": "error",
+                "message": "Your account has been disabled. Please contact your administrator."
+            }), 403
+
+        # Update last login timestamp
+        with conn.cursor() as cursor:
+            cursor.execute("""
+                UPDATE users
+                SET last_login = NOW()
+                WHERE id = %s
+            """, (user["id"],))
+        conn.commit()
+
+        return jsonify({
+            "status": "success",
+            "message": "Login successful.",
+            "user": {
+                "id": user["id"],
+                "username": user["username"]
+            }
+        }), 200
+
     except Exception as e:
-        return jsonify({"status": "error", "message": str(e)}), 500
+        if conn:
+            conn.rollback()
+
+        return jsonify({
+            "status": "error",
+            "message": str(e)
+        }), 500
+
     finally:
         if conn:
             conn.close()
-
 
 @app.route("/users/hash-password", methods=["POST"])
 def hash_password_helper():
@@ -278,34 +347,74 @@ def hash_password_helper():
 @app.route("/signup", methods=["POST"])
 def signup():
     data = request.get_json(silent=True) or {}
+
     username = data.get("username")
     password = data.get("password")
+    role = data.get("role", "Receptionist")
 
     if not username or not password:
-        return jsonify({"status": "error", "message": "Missing username or password."}), 400
+        return jsonify({
+            "status": "error",
+            "message": "Missing username or password."
+        }), 400
+
+    if role not in ["Admin", "Receptionist"]:
+        return jsonify({
+            "status": "error",
+            "message": "Invalid role."
+        }), 400
 
     conn = None
     try:
         conn = get_connection()
+
         with conn.cursor() as cursor:
-            # Check if user already exists
-            cursor.execute("SELECT id FROM users WHERE username = %s", (username,))
+
+            cursor.execute(
+                "SELECT id FROM users WHERE username=%s",
+                (username,)
+            )
+
             if cursor.fetchone():
-                return jsonify({"status": "error", "message": "Username already exists."}), 409
+                return jsonify({
+                    "status": "error",
+                    "message": "Username already exists."
+                }), 409
 
             hashed = generate_password_hash(password)
-            cursor.execute("INSERT INTO users (username, password) VALUES (%s, %s)", (username, hashed))
+
+            cursor.execute("""
+                INSERT INTO users
+                (username, password, role, status)
+                VALUES (%s, %s, %s, %s)
+            """, (
+                username,
+                hashed,
+                role,
+                "Active"
+            ))
+
         conn.commit()
-        return jsonify({"status": "success", "message": "User created successfully."}), 201
+
+        return jsonify({
+            "status": "success",
+            "message": "User created successfully."
+        }), 201
+
     except Exception as e:
+
         if conn:
             conn.rollback()
-        return jsonify({"status": "error", "message": str(e)}), 500
+
+        return jsonify({
+            "status": "error",
+            "message": str(e)
+        }), 500
+
     finally:
+
         if conn:
             conn.close()
-
-
 
 @app.route("/bookings", methods=["GET"])
 def get_bookings():
@@ -782,19 +891,19 @@ def get_rooms_api():
         with conn.cursor() as cursor:
             cursor.execute("SELECT id, name, price, total_rooms, description, image_url, amenities, pricing FROM room_types")
             rows = cursor.fetchall()
-            
+
             rooms = []
             for r in rows:
                 try:
                     amenities = json.loads(r["amenities"]) if r.get("amenities") else []
                 except:
                     amenities = []
-                    
+
                 try:
                     pricing = json.loads(r["pricing"]) if r.get("pricing") else {}
                 except:
                     pricing = {}
-                    
+
                 rooms.append({
                     "id": r["id"],
                     "name": r["name"],
@@ -822,10 +931,10 @@ def update_room_api(room_id):
     image_url = data.get("image_url")
     amenities = data.get("amenities")
     pricing = data.get("pricing")
-    
+
     if not name or price is None:
         return jsonify({"status": "error", "message": "Name and price are required."}), 400
-        
+
     conn = None
     try:
         conn = get_connection()
@@ -834,7 +943,7 @@ def update_room_api(room_id):
             cursor.execute("SELECT id FROM room_types WHERE id = %s", (room_id,))
             if not cursor.fetchone():
                 return jsonify({"status": "error", "message": "Room not found."}), 404
-                
+
             cursor.execute("""
                 UPDATE room_types
                 SET name = %s,
@@ -864,13 +973,152 @@ def update_room_api(room_id):
             conn.close()
 
 
+@app.route("/uploads/<filename>")
+def serve_upload(filename):
+    return send_from_directory(app.config['UPLOAD_FOLDER'], filename)
+
+
+@app.route("/api/upload", methods=["POST"])
+def upload_file_api():
+    if "file" not in request.files:
+        return jsonify({"status": "error", "message": "No file uploaded"}), 400
+    file = request.files["file"]
+    if file.filename == "":
+        return jsonify({"status": "error", "message": "Empty file name"}), 400
+
+    filename = secure_filename(file.filename)
+    ext = filename.rsplit(".", 1)[1].lower() if "." in filename else ""
+    if ext not in ["jpg", "jpeg", "png", "webp"]:
+        return jsonify({"status": "error", "message": "Only JPG, JPEG, PNG, and WEBP formats are supported."}), 400
+
+    file.seek(0, os.SEEK_END)
+    size = file.tell()
+    file.seek(0)
+    if size > 3 * 1024 * 1024:
+        return jsonify({"status": "error", "message": "File size exceeds the 3 MB limit."}), 400
+
+    try:
+        img = Image.open(file)
+        try:
+            from PIL import ImageOps
+            img = ImageOps.exif_transpose(img)
+        except:
+            pass
+
+        max_size = 1600
+        width, height = img.size
+        if width > max_size or height > max_size:
+            if width > height:
+                new_width = max_size
+                new_height = int((max_size / width) * height)
+            else:
+                new_height = max_size
+                new_width = int((max_size / height) * width)
+            img = img.resize((new_width, new_height), Image.LANCZOS)
+
+        unique_name = f"{uuid.uuid4().hex}.jpg"
+        filepath = os.path.join(app.config['UPLOAD_FOLDER'], unique_name)
+
+        if img.mode in ("RGBA", "P"):
+            img = img.convert("RGB")
+        img.save(filepath, "JPEG", quality=85)
+
+        return jsonify({
+            "status": "success",
+            "url": f"/uploads/{unique_name}"
+        }), 200
+    except Exception as e:
+        return jsonify({"status": "error", "message": f"Failed to process image: {str(e)}"}), 500
+
+
+@app.route("/api/gallery", methods=["GET"])
+def get_gallery_api():
+    conn = None
+    try:
+        conn = get_connection()
+        with conn.cursor() as cursor:
+            cursor.execute("SELECT id, image_url, created_at FROM gallery ORDER BY id DESC")
+            rows = cursor.fetchall()
+            images = []
+            for r in rows:
+                images.append({
+                    "id": r["id"],
+                    "image_url": r["image_url"],
+                    "created_at": r["created_at"].isoformat() if isinstance(r["created_at"], (date, datetime)) else str(r["created_at"])
+                })
+            return jsonify({"status": "success", "images": images}), 200
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
+    finally:
+        if conn:
+            conn.close()
+
+
+@app.route("/api/gallery", methods=["POST"])
+def add_gallery_api():
+    data = request.get_json(silent=True) or {}
+    image_url = data.get("image_url")
+    if not image_url:
+        return jsonify({"status": "error", "message": "Image URL is required."}), 400
+
+    conn = None
+    try:
+        conn = get_connection()
+        conn.begin()
+        with conn.cursor() as cursor:
+            cursor.execute("INSERT INTO gallery (image_url) VALUES (%s)", (image_url,))
+        conn.commit()
+        return jsonify({"status": "success", "message": "Image added to gallery."}), 200
+    except Exception as e:
+        if conn:
+            conn.rollback()
+        return jsonify({"status": "error", "message": str(e)}), 500
+    finally:
+        if conn:
+            conn.close()
+
+
+@app.route("/api/gallery/<int:img_id>", methods=["DELETE"])
+def delete_gallery_api(img_id):
+    conn = None
+    try:
+        conn = get_connection()
+        conn.begin()
+        with conn.cursor() as cursor:
+            cursor.execute("SELECT image_url FROM gallery WHERE id = %s", (img_id,))
+            row = cursor.fetchone()
+            if not row:
+                return jsonify({"status": "error", "message": "Image not found."}), 404
+
+            img_url = row["image_url"]
+            if img_url.startswith("/uploads/"):
+                filename = img_url.split("/")[-1]
+                filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+                if os.path.exists(filepath):
+                    try:
+                        os.remove(filepath)
+                    except Exception as e:
+                        print(f"Failed to delete file {filepath}: {e}")
+
+            cursor.execute("DELETE FROM gallery WHERE id = %s", (img_id,))
+        conn.commit()
+        return jsonify({"status": "success", "message": "Image deleted from gallery."}), 200
+    except Exception as e:
+        if conn:
+            conn.rollback()
+        return jsonify({"status": "error", "message": str(e)}), 500
+    finally:
+        if conn:
+            conn.close()
+
+
 def run_migrations():
     try:
         conn = get_connection()
         with conn.cursor() as cursor:
             cursor.execute("SHOW COLUMNS FROM room_types")
             columns = [row["Field"] for row in cursor.fetchall()]
-            
+
             alterations = []
             if "description" not in columns:
                 alterations.append("ADD COLUMN description TEXT")
@@ -880,15 +1128,15 @@ def run_migrations():
                 alterations.append("ADD COLUMN amenities TEXT")
             if "pricing" not in columns:
                 alterations.append("ADD COLUMN pricing TEXT")
-                
+
             if alterations:
                 cursor.execute(f"ALTER TABLE room_types {', '.join(alterations)}")
                 conn.commit()
                 print("Database migrated successfully.")
-                
+
             cursor.execute("SELECT id, description, image_url FROM room_types")
             existing = cursor.fetchall()
-            
+
             defaults = {
                 1: {
                     "description": "A well-appointed retreat offering modern comforts and elegant simplicity — the ideal base for both leisure and business.",
@@ -955,13 +1203,13 @@ def run_migrations():
                     }
                 }
             }
-            
+
             for row in existing:
                 rid = row["id"]
                 if not row.get("description") and rid in defaults:
                     d = defaults[rid]
                     cursor.execute("""
-                        UPDATE room_types 
+                        UPDATE room_types
                         SET description = %s, image_url = %s, amenities = %s, pricing = %s
                         WHERE id = %s
                     """, (
@@ -971,6 +1219,42 @@ def run_migrations():
                         json.dumps(d["pricing"]),
                         rid
                     ))
+            # Create gallery table
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS gallery (
+                    id INT AUTO_INCREMENT PRIMARY KEY,
+                    image_url VARCHAR(500) NOT NULL,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )
+            """)
+            conn.commit()
+
+            # Check if gallery has entries
+            cursor.execute("SELECT COUNT(*) as cnt FROM gallery")
+            gallery_count = cursor.fetchone()["cnt"]
+
+            if gallery_count == 0:
+                # Copy default images from src/images to uploads/ and insert
+                src_images_dir = os.path.abspath(os.path.join(BACKEND_DIR, '..', 'images'))
+                default_gallery = [
+                    "shan2.jpg", "pic1.jpg", "pic2.jpg", "pic3.jpg", "pic4.jpg",
+                    "pic5.jpg", "pic6.jpg", "pic7.jpg", "pic8.jpg", "pic9.jpg",
+                    "pic10.jpg", "pic11.jpg", "pic12.jpg", "pic13.jpg", "pic14.jpg",
+                    "pic15.jpg", "pic16.jpg", "pic17.jpg", "pic18.jpg", "pic19.jpg"
+                ]
+
+                if os.path.exists(src_images_dir):
+                    for img in default_gallery:
+                        src_path = os.path.join(src_images_dir, img)
+                        if os.path.exists(src_path):
+                            dest_path = os.path.join(app.config['UPLOAD_FOLDER'], img)
+                            if not os.path.exists(dest_path):
+                                shutil.copy2(src_path, dest_path)
+
+                            rel_url = f"/uploads/{img}"
+                            cursor.execute("INSERT INTO gallery (image_url) VALUES (%s)", (rel_url,))
+                    conn.commit()
+                    print("Seeded default gallery database entries.")
             conn.commit()
     except Exception as e:
         print(f"Error running database migrations: {e}")
@@ -978,7 +1262,74 @@ def run_migrations():
         if 'conn' in locals() and conn:
             conn.close()
 
+@app.route('/api/settings', methods=['GET', 'POST'])
+def handle_settings():
+    try:
+        connection = get_connection()
+        with connection.cursor(pymysql.cursors.DictCursor) as cursor:
+            if request.method == 'GET':
+                # Fetch current settings (id=1)
+                cursor.execute("SELECT * FROM site_settings WHERE id = 1")
+                settings = cursor.fetchone()
+                if not settings:
+                    settings = {
+                        "resortName": "Shanvilla Resort",
+                        "phone": "0742682580",
+                        "email": "info@shanvilla.com",
+                        "checkinTime": "14:00",
+                        "checkoutTime": "10:00",
+                        "cancellationPolicy": "Free cancellation up to 24 hours before check-in."
+                    }
+                return jsonify({"status": "success", "settings": settings})
 
+            elif request.method == 'POST':
+                # Save new settings
+                data = request.json
+                sql = """
+                    UPDATE site_settings
+                    SET resortName=%s, phone=%s, email=%s, checkinTime=%s, checkoutTime=%s, cancellationPolicy=%s
+                    WHERE id = 1
+                """
+                cursor.execute(sql, (
+                    data.get('resortName'),
+                    data.get('phone'),
+                    data.get('email'),
+                    data.get('checkinTime'),
+                    data.get('checkoutTime'),
+                    data.get('cancellationPolicy')
+                ))
+                connection.commit()
+                return jsonify({"status": "success", "message": "Settings updated"})
+    except Exception as e:
+        print(f"Error handling settings: {str(e)}")
+        return jsonify({"status": "error", "message": str(e)}), 500
+    finally:
+        if 'connection' in locals() and connection.open:
+            connection.close()
+
+@app.route("/api/users", methods=["GET"])
+def get_users():
+    conn = get_connection()
+    cursor = conn.cursor(pymysql.cursors.DictCursor)
+
+    cursor.execute("""
+        SELECT
+            id,
+            username,
+            role,
+            status,
+            created_at,
+            last_login
+        FROM users
+        ORDER BY id DESC
+    """)
+
+    users = cursor.fetchall()
+
+    cursor.close()
+    conn.close()
+
+    return jsonify(users)
 # Run self-healing migrations on startup
 run_migrations()
 

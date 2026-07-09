@@ -3,7 +3,7 @@ import axios from 'axios';
 import {
   Table, Button, message, Badge, Card, Popconfirm,
   Dropdown, Input, Select, DatePicker, Drawer,
-  Timeline, Form, Modal, Tag, Spin,
+  Timeline, Form, Modal, Tag, Spin, Upload, Progress,
 } from 'antd';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -65,13 +65,16 @@ const STATUS_ACTIONS = {
 
 /* ─────────────────────────────────────── */
 const AdminPage = () => {
-  const [view, setView]           = useState('dashboard');
+  const [view, setView]           = useState(() => localStorage.getItem('adminActiveView') || 'dashboard');
   const [contacts, setContacts]   = useState([]);
   const [bookings, setBookings]   = useState([]);
   const [stats, setStats]         = useState({});
   const [loading, setLoading]     = useState(false);
   const [actLoading, setActLoading] = useState(null);
   const [connStatus, setConnStatus] = useState('checking'); // 'ok' | 'error' | 'checking'
+
+  /* sidebar collapse */
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
 
   /* filters */
   const [search, setSearch]           = useState('');
@@ -99,12 +102,20 @@ const AdminPage = () => {
   const [maintenance, setMaintenance] = useState(new Set());
 
   /* users */
-  const [users, setUsers]           = useState([
-    { id:1, username:'admin', role:'Administrator', status:'active' },
-    { id:2, username:'reception', role:'Reception', status:'active' },
-  ]);
-  const [userOpen, setUserOpen]     = useState(false);
+  const [users, setUsers]           = useState([]);
+
+  const [userOpen, setUserOpen]         = useState(false);
   const [userForm] = Form.useForm();
+
+  /* edit user */
+  const [editUserTarget, setEditUserTarget] = useState(null);
+  const [editUserOpen, setEditUserOpen]     = useState(false);
+  const [editUserForm] = Form.useForm();
+
+  /* reset password */
+  const [resetPwdTarget, setResetPwdTarget] = useState(null);
+  const [resetPwdOpen, setResetPwdOpen]     = useState(false);
+  const [resetPwdForm] = Form.useForm();
 
   /* reply */
   const [replyOpen, setReplyOpen]   = useState(false);
@@ -114,19 +125,48 @@ const AdminPage = () => {
   /* settings */
   const [settingsForm] = Form.useForm();
 
+  /* upload & gallery state */
+  const [uploadingImage, setUploadingImage] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
+  const [roomImagePreview, setRoomImagePreview] = useState(null);
+  const [galleryList, setGalleryList] = useState([]);
+  const [uploadingGallery, setUploadingGallery] = useState(false);
+
   const navigate = useNavigate();
   const adminName = localStorage.getItem('adminUsername') || 'admin';
+
+  /* ── auto-collapse on small screens ── */
+  useEffect(() => {
+    const handleResize = () => {
+      if (window.innerWidth <= 992) {
+        setSidebarCollapsed(true);
+      } else {
+        setSidebarCollapsed(false);
+      }
+    };
+    handleResize();
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
+  /* ── sync active view to localstorage ── */
+  useEffect(() => {
+    localStorage.setItem('adminActiveView', view);
+  }, [view]);
 
   /* ── fetch ── */
   const fetchData = useCallback(async () => {
     setLoading(true);
     try {
-      const [cRes, bRes, dRes, rRes, dbRoomsRes] = await Promise.all([
+      const [cRes, bRes, dRes, rRes, dbRoomsRes, galRes, setRes, usersRes] = await Promise.all([
         axios.get(`${API_BASE}/get_contacts`),
         axios.get(`${API_BASE}/bookings?limit=200`),
         axios.get(`${API_BASE}/dashboard`),
         axios.get(`${API_BASE}/availability?checkin=${dayjs().format('YYYY-MM-DD')}&checkout=${dayjs().add(1, 'day').format('YYYY-MM-DD')}`),
         axios.get(`${API_BASE}/api/rooms`),
+        axios.get(`${API_BASE}/api/gallery`),
+        axios.get(`${API_BASE}/api/settings`).catch(() => null), // Catch in case endpoint isn't ready
+        axios.get(`${API_BASE}/api/users`).catch(() => null),    // Fetch users list from backend
       ]);
 
       if (cRes.data.status === 'success') setContacts(cRes.data.data || []);
@@ -151,6 +191,20 @@ const AdminPage = () => {
         });
         setRooms(mergedRooms);
       }
+
+      if (galRes.data.status === 'success') {
+        setGalleryList(galRes.data.images || []);
+      }
+
+      if (setRes?.data?.status === 'success') {
+        settingsForm.setFieldsValue(setRes.data.settings);
+      }
+
+      if (usersRes?.data) {
+        const uList = Array.isArray(usersRes.data) ? usersRes.data : usersRes.data.users || [];
+        setUsers(uList);
+      }
+
       setConnStatus('ok');
     } catch (err) {
       console.error(err);
@@ -163,6 +217,7 @@ const AdminPage = () => {
 
   useEffect(() => {
     if (!localStorage.getItem('adminToken')) { navigate('/sponge'); return; }
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     fetchData();
   }, [fetchData, navigate]);
 
@@ -238,6 +293,9 @@ const AdminPage = () => {
   const handleOpenRoomEdit = (room) => {
     setEditRoom(room);
     const selected = (room.amenities || []).map(a => `${a.icon}|${a.label}`);
+    const previewUrl = IMAGE_MAP[room.image_url] || (room.image_url?.startsWith('/uploads/') ? `${API_BASE}${room.image_url}` : room.image_url);
+    setRoomImagePreview(previewUrl);
+    setUploadProgress(0);
     roomForm.setFieldsValue({
       name: room.name,
       image_url: room.image_url,
@@ -281,6 +339,111 @@ const AdminPage = () => {
     }
   };
 
+  const handleImageUpload = async (options) => {
+    const { file, onSuccess, onError } = options;
+    const isValidFormat = ['image/jpeg', 'image/png', 'image/webp'].includes(file.type);
+    if (!isValidFormat) {
+      message.error('You can only upload JPG/JPEG/PNG/WEBP files!');
+      onError(new Error('Invalid format'));
+      return;
+    }
+    const isLt3M = file.size / 1024 / 1024 < 3;
+    if (!isLt3M) {
+      message.error('Image must be smaller than 3MB!');
+      onError(new Error('File too large'));
+      return;
+    }
+    const formData = new FormData();
+    formData.append('file', file);
+    setUploadingImage(true);
+    setUploadProgress(0);
+    try {
+      const res = await axios.post(`${API_BASE}/api/upload`, formData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+        onUploadProgress: (progressEvent) => {
+          const pct = Math.round((progressEvent.loaded * 100) / progressEvent.total);
+          setUploadProgress(pct);
+        },
+      });
+      if (res.data.status === 'success') {
+        const uploadedUrl = res.data.url;
+        const cacheBustedUrl = `${uploadedUrl}?t=${Date.now()}`;
+        roomForm.setFieldsValue({ image_url: uploadedUrl });
+        setRoomImagePreview(uploadedUrl.startsWith('/uploads/') ? `${API_BASE}${cacheBustedUrl}` : cacheBustedUrl);
+        message.success('Image uploaded successfully!');
+        onSuccess(res.data);
+      } else {
+        message.error(res.data.message || 'Upload failed');
+        onError(new Error(res.data.message || 'Upload failed'));
+      }
+    } catch (err) {
+      console.error(err);
+      message.error(err.response?.data?.message || 'Error uploading image.');
+      onError(err);
+    } finally {
+      setUploadingImage(false);
+    }
+  };
+
+  const handleGalleryUpload = async (options) => {
+    const { file, onSuccess, onError } = options;
+    const isValidFormat = ['image/jpeg', 'image/png', 'image/webp'].includes(file.type);
+    if (!isValidFormat) {
+      message.error('You can only upload JPG/JPEG/PNG/WEBP files!');
+      onError(new Error('Invalid format'));
+      return;
+    }
+    const isLt3M = file.size / 1024 / 1024 < 3;
+    if (!isLt3M) {
+      message.error('Image must be smaller than 3MB!');
+      onError(new Error('File too large'));
+      return;
+    }
+    const formData = new FormData();
+    formData.append('file', file);
+    setUploadingGallery(true);
+    try {
+      const uploadRes = await axios.post(`${API_BASE}/api/upload`, formData, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+      });
+      if (uploadRes.data.status === 'success') {
+        const imageUrl = uploadRes.data.url;
+        const galRes = await axios.post(`${API_BASE}/api/gallery`, { image_url: imageUrl });
+        if (galRes.data.status === 'success') {
+          message.success('Image added to gallery!');
+          fetchData();
+          onSuccess(galRes.data);
+        } else {
+          message.error(galRes.data.message || 'Failed to add image to gallery.');
+          onError(new Error(galRes.data.message || 'Failed to add image to gallery.'));
+        }
+      } else {
+        message.error(uploadRes.data.message || 'Upload failed');
+        onError(new Error(uploadRes.data.message || 'Upload failed'));
+      }
+    } catch (err) {
+      console.error(err);
+      message.error(err.response?.data?.message || 'Error uploading gallery image.');
+      onError(err);
+    } finally {
+      setUploadingGallery(false);
+    }
+  };
+
+  const handleDeleteGallery = async (id) => {
+    try {
+      const res = await axios.delete(`${API_BASE}/api/gallery/${id}`);
+      if (res.data.status === 'success') {
+        message.success('Image deleted from gallery.');
+        fetchData();
+      } else {
+        message.error(res.data.message || 'Failed to delete image.');
+      }
+    } catch (err) {
+      message.error('Error deleting image.');
+    }
+  };
+
   const saveNote = async (note) => {
     if (!selected) return;
     const newNote = selected.admin_notes ? `${selected.admin_notes}, ${note}` : note;
@@ -292,11 +455,15 @@ const AdminPage = () => {
 
   const createUser = async (vals) => {
     try {
-      const res = await axios.post(`${API_BASE}/signup`, { username: vals.username, password: vals.password });
+      const res = await axios.post(`${API_BASE}/signup`, { 
+        username: vals.username, 
+        password: vals.password,
+        role: vals.role
+      });
       if (res.data.status === 'success') {
         message.success('User created.');
-        setUsers(p => [...p, { id: Date.now(), username: vals.username, role: vals.role, status: 'active' }]);
         setUserOpen(false); userForm.resetFields();
+        fetchData();
       } else message.error(res.data.message || 'Failed to create user.');
     } catch (err) { message.error(err.response?.data?.message || 'Error creating user.'); }
   };
@@ -329,12 +496,84 @@ const AdminPage = () => {
     return matchQ && matchS && matchD;
   });
 
+  /* ── header content helpers ── */
+  const getHeaderTitle = () => {
+    switch (view) {
+      case 'dashboard': return 'Dashboard';
+      case 'bookings': return 'Bookings';
+      case 'rooms': return 'Room Management';
+      case 'gallery': return 'Resort Gallery';
+      case 'inquiries': return 'Guest Inquiries';
+      case 'reports': return 'Reports';
+      case 'users': return 'Users';
+      case 'settings': return 'Settings';
+      default: return 'Admin Console';
+    }
+  };
+
+  const getHeaderSubtitle = () => {
+    switch (view) {
+      case 'dashboard': {
+        const timeOfDay = dayjs().hour() < 12 ? 'morning' : 'afternoon';
+        return `Good ${timeOfDay}, ${adminName}. Here's today at a glance.`;
+      }
+      case 'bookings':
+        return `${filtered.length} reservation${filtered.length !== 1 ? 's' : ''} shown`;
+      case 'rooms':
+        return 'Live occupancy, pricing, and maintenance controls.';
+      case 'gallery':
+        return 'Upload, view, and manage images displayed on the main guest-facing gallery section.';
+      case 'inquiries':
+        return `${contacts.length} message${contacts.length !== 1 ? 's' : ''} received`;
+      case 'reports':
+        return 'Operational summaries and performance indicators.';
+      case 'users':
+        return 'Manage staff accounts and access permissions.';
+      case 'settings':
+        return 'Resort configuration and operating parameters.';
+      default:
+        return '';
+    }
+  };
+
+  const getHeaderAction = () => {
+    const refreshBtn = (
+      <Button onClick={fetchData} loading={loading} icon={<i className="bi bi-arrow-clockwise" />}>
+        Refresh
+      </Button>
+    );
+
+    switch (view) {
+      case 'dashboard':
+      case 'rooms':
+      case 'inquiries':
+        return refreshBtn;
+      case 'bookings':
+        return (
+          <div style={{ display: 'flex', gap: 10 }}>
+            {refreshBtn}
+            <Button type="primary" onClick={() => setBookingOpen(true)} className="btn-blue">
+              <i className="bi bi-plus-lg" style={{ marginRight: 6 }} /> Create Booking
+            </Button>
+          </div>
+        );
+      case 'users':
+        return (
+          <Button type="primary" onClick={() => setUserOpen(true)} className="btn-blue">
+            <i className="bi bi-person-plus" style={{ marginRight: 6 }} /> Add User
+          </Button>
+        );
+      default:
+        return null;
+    }
+  };
+
   /* ── booking columns ── */
   const bookingCols = [
     { title:'Ref', dataIndex:'booking_reference', key:'ref',
-      render: t => <span style={{fontWeight:700,color:'#C6A355',fontSize:'0.82rem'}}>{t}</span>, width:110 },
+      render: t => <span style={{fontWeight:700,color:'var(--primary-blue)',fontSize:'0.82rem'}}>{t}</span>, width:110 },
     { title:'Guest', dataIndex:'guest_name', key:'guest',
-      render: (t,r) => <span onClick={() => openDetail(r)} style={{fontWeight:600,color:'#1E3A5B',cursor:'pointer'}}>{t}</span> },
+      render: (t,r) => <span onClick={() => openDetail(r)} style={{fontWeight:600,color:'var(--text-main)',cursor:'pointer'}}>{t}</span> },
     { title:'Room', dataIndex:'room_name', key:'room' },
     { title:'Phone', dataIndex:'phone', key:'phone', width:120 },
     { title:'Check-in', dataIndex:'checkin_date', key:'ci', width:100,
@@ -372,19 +611,25 @@ const AdminPage = () => {
   /* ── inquiry columns ── */
   const inqCols = [
     { title:'Guest', key:'g',
-      render:(_,r) => <span style={{fontWeight:readSet.has(r.id)?500:700,color:'#1E3A5B'}}>{r.first_name} {r.last_name} {!readSet.has(r.id)&&<Badge status="processing"/>}</span> },
+      render:(_,r) => <span style={{fontWeight:readSet.has(r.id)?500:700,color:'var(--text-main)'}}>{r.first_name} {r.last_name} {!readSet.has(r.id)&&<Badge status="processing"/>}</span> },
     { title:'Email', dataIndex:'email', key:'email' },
-    { title:'Phone', dataIndex:'phone', key:'phone' },
+    { title:'Phone', dataIndex:'phone', key:'phone', responsive:['md'] },
     { title:'Message', dataIndex:'message', key:'msg', ellipsis:true },
-    { title:'Status', key:'s', width:110,
+    { title:'Status', key:'s', width:100,
       render:(_,r) => <Tag color={repliedSet.has(r.id)?'success':'warning'}>{repliedSet.has(r.id)?'Replied':'Pending'}</Tag> },
-    { title:'Actions', key:'act', width:180,
+    { title:'Actions', key:'act', width:220, fixed:'right',
       render:(_,r) => (
-        <div style={{display:'flex',gap:6}}>
-          <Button size="small" type="link" onClick={() => setReadSet(p=>new Set([...p,r.id]))}>Mark Read</Button>
-          <Button size="small" type="link" onClick={() => { setReplyTarget(r); setReplyOpen(true); }}>Reply</Button>
-          <Popconfirm title="Delete this inquiry?" onConfirm={()=>deleteContact(r.id)} okText="Yes" cancelText="No">
-            <Button size="small" type="link" danger>Delete</Button>
+        <div className="inq-actions">
+          <button className="inq-btn inq-btn--muted" onClick={() => setReadSet(p=>new Set([...p,r.id]))}>
+            <i className="bi bi-check2-circle" /> Read
+          </button>
+          <button className="inq-btn inq-btn--primary" onClick={() => { setReplyTarget(r); setReplyOpen(true); }}>
+            <i className="bi bi-reply" /> Reply
+          </button>
+          <Popconfirm title="Delete this inquiry?" onConfirm={()=>deleteContact(r.id)} okText="Yes" cancelText="No" placement="topRight">
+            <button className="inq-btn inq-btn--danger">
+              <i className="bi bi-trash" /> Delete
+            </button>
           </Popconfirm>
         </div>
       )
@@ -396,6 +641,7 @@ const AdminPage = () => {
     { id:'dashboard', icon:'bi-speedometer2', label:'Dashboard' },
     { id:'bookings',  icon:'bi-calendar-range', label:'Bookings' },
     { id:'rooms',     icon:'bi-house-door',     label:'Rooms' },
+    { id:'gallery',   icon:'bi-images',         label:'Gallery' },
     { id:'inquiries', icon:'bi-envelope',        label:'Inquiries' },
     { id:'reports',   icon:'bi-graph-up-arrow',  label:'Reports' },
     { id:'users',     icon:'bi-people',           label:'Users' },
@@ -406,8 +652,13 @@ const AdminPage = () => {
   return (
     <div className="admin-layout">
 
+      {/* MOBILE SIDEBAR BACKDROP */}
+      {!sidebarCollapsed && (
+        <div className="sidebar-backdrop" onClick={() => setSidebarCollapsed(true)} />
+      )}
+
       {/* SIDEBAR */}
-      <aside className="admin-sidebar">
+      <aside className={`admin-sidebar ${sidebarCollapsed ? 'collapsed' : ''}`}>
         <div className="sidebar-logo">
           <h2 className="sidebar-title">Shanvilla</h2>
           <div className="conn-indicator">
@@ -420,7 +671,12 @@ const AdminPage = () => {
 
         <nav className="sidebar-menu">
           {navItems.map(n => (
-            <button key={n.id} className={`menu-item ${view===n.id?'active':''}`} onClick={()=>setView(n.id)}>
+            <button key={n.id} className={`menu-item ${view===n.id?'active':''}`} onClick={()=>{
+              setView(n.id);
+              if (window.innerWidth <= 992) {
+                setSidebarCollapsed(true);
+              }
+            }}>
               <i className={`bi ${n.icon}`} />
               <span>{n.label}</span>
             </button>
@@ -428,7 +684,10 @@ const AdminPage = () => {
 
           <div style={{flex:1}} />
 
-          <button className="menu-item create-btn" onClick={()=>setBookingOpen(true)}>
+          <button className="menu-item create-btn" onClick={()=>{
+            setBookingOpen(true);
+            if (window.innerWidth <= 992) setSidebarCollapsed(true);
+          }}>
             <i className="bi bi-plus-circle" />
             <span>Create Booking</span>
           </button>
@@ -437,23 +696,54 @@ const AdminPage = () => {
             <span>Logout</span>
           </button>
         </nav>
+
+        {/* Sidebar collapse toggle */}
+        <button
+          className="sidebar-toggle"
+          onClick={() => setSidebarCollapsed(prev => !prev)}
+          title={sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+        >
+          <i className={`bi ${sidebarCollapsed ? 'bi-chevron-right' : 'bi-chevron-left'}`} />
+        </button>
       </aside>
 
       {/* MAIN */}
-      <main className="admin-main-content">
+      <main className={`admin-main-content ${sidebarCollapsed ? 'sidebar-collapsed' : ''}`}>
+        
+        {/* UNIFIED STICKY HEADER */}
+        <div className="view-header">
+          <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+            {/* Sidebar toggle hamburger menu */}
+            <button
+              className={`menu-toggle-btn ${sidebarCollapsed ? 'menu-toggle-btn--closed' : 'menu-toggle-btn--open'}`}
+              onClick={() => setSidebarCollapsed(prev => !prev)}
+              title={sidebarCollapsed ? 'Open sidebar' : 'Hide sidebar'}
+            >
+              <i className={sidebarCollapsed ? 'bi bi-list' : 'bi bi-chevron-left'} />
+            </button>
+            <div>
+              <h1 className="view-title">{getHeaderTitle()}</h1>
+              <p className="view-subtitle">{getHeaderSubtitle()}</p>
+            </div>
+          </div>
+          <div className="view-header-right">
+            {sidebarCollapsed && (
+              <div className={`conn-pill ${connStatus}`}>
+                <span className={`conn-dot ${connStatus}`} />
+                <span className="conn-label">
+                  {connStatus === 'ok' ? 'Connected' : connStatus === 'error' ? 'Offline' : 'Connecting...'}
+                </span>
+              </div>
+            )}
+            {getHeaderAction()}
+          </div>
+        </div>
+
         <AnimatePresence mode="wait">
 
           {/* ── DASHBOARD ── */}
           {view === 'dashboard' && (
             <motion.div key="dash" className="view-wrap" initial={{opacity:0,y:12}} animate={{opacity:1,y:0}} exit={{opacity:0}} transition={{duration:0.3}}>
-              <div className="view-header">
-                <div>
-                  <h1 className="view-title">Dashboard</h1>
-                  <p className="view-subtitle">Good {dayjs().hour()<12?'morning':'afternoon'}, {adminName}. Here's today at a glance.</p>
-                </div>
-                <Button onClick={fetchData} loading={loading} icon={<i className="bi bi-arrow-clockwise" />}>Refresh</Button>
-              </div>
-
               {loading ? <div className="center-spin"><Spin size="large" /></div> : (
                 <>
                   <div className="stats-grid">
@@ -503,16 +793,6 @@ const AdminPage = () => {
           {/* ── BOOKINGS ── */}
           {view === 'bookings' && (
             <motion.div key="bk" className="view-wrap" initial={{opacity:0,y:12}} animate={{opacity:1,y:0}} exit={{opacity:0}} transition={{duration:0.3}}>
-              <div className="view-header">
-                <div>
-                  <h1 className="view-title">Bookings</h1>
-                  <p className="view-subtitle">{filtered.length} reservation{filtered.length!==1?'s':''} shown</p>
-                </div>
-                <Button type="primary" onClick={()=>setBookingOpen(true)} style={{background:'#0F8F46',border:'none'}}>
-                  <i className="bi bi-plus-lg" style={{marginRight:6}} /> Create Booking
-                </Button>
-              </div>
-
               <Card className="admin-card-style">
                 <div className="filter-row">
                   <div className="filter-group">
@@ -541,6 +821,7 @@ const AdminPage = () => {
                 <Table columns={bookingCols} dataSource={filtered} rowKey="id"
                   loading={loading} pagination={{pageSize:10,showSizeChanger:false}}
                   className="sv-admin-table" size="middle"
+                  scroll={{ x: 1000 }}
                   rowClassName={r => {
                     const s = r.status?.toLowerCase();
                     if (s==='pending') return 'pending-row';
@@ -556,87 +837,92 @@ const AdminPage = () => {
           {/* ── ROOMS ── */}
           {view === 'rooms' && (
             <motion.div key="rm" className="view-wrap" initial={{opacity:0,y:12}} animate={{opacity:1,y:0}} exit={{opacity:0}} transition={{duration:0.3}}>
-              <div className="view-header">
-                <div><h1 className="view-title">Room Management</h1>
-                <p className="view-subtitle">Live occupancy, pricing, and maintenance controls.</p></div>
-                <Button onClick={fetchData} loading={loading} icon={<i className="bi bi-arrow-clockwise"/>}>Refresh</Button>
-              </div>
               <div className="room-grid">
                 {rooms.map(room => {
                   const inMaint = maintenance.has(room.id);
-                  const avail   = inMaint ? 0 : Math.max(room.total_rooms - room.booked, 0);
-                  const resolvedImage = IMAGE_MAP[room.image_url] || room.image_url;
+                  const activeStatuses = ['confirmed','checked_in','pending'];
+                  const bookedCount = bookings.filter(b =>
+                    b.room_type_id === room.id &&
+                    activeStatuses.includes((b.status||'pending').toLowerCase())
+                  ).length;
+                  const totalRooms = room.total_rooms || 1;
+                  const availCount = inMaint ? 0 : Math.max(totalRooms - bookedCount, 0);
+                  const resolvedImage = IMAGE_MAP[room.image_url] || (room.image_url?.startsWith('/uploads/') ? `${API_BASE}${room.image_url}` : room.image_url);
+                  const occupancyPct = Math.round((bookedCount / totalRooms) * 100);
                   
                   return (
-                    <div className="room-card" key={room.id} style={{ padding: 0, overflow: 'hidden' }}>
-                      {/* Image header matching guest view */}
-                      <div style={{ overflow: 'hidden', height: 180, position: 'relative' }}>
+                    <div className="room-card" key={room.id}>
+                      {/* Image header */}
+                      <div className="room-card-image">
                         <img
                           src={resolvedImage}
                           alt={room.name}
-                          style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
                         />
+                        {/* Occupancy bar overlay */}
+                        <div style={{ position:'absolute', bottom:0, left:0, right:0, height:4, background:'rgba(0,0,0,0.2)' }}>
+                          <div style={{ height:'100%', width:`${occupancyPct}%`, background: occupancyPct > 80 ? '#EF4444' : occupancyPct > 50 ? '#F59E0B' : '#10B981', transition:'width 0.6s ease' }} />
+                        </div>
                         <div style={{ position: 'absolute', top: 12, right: 12 }}>
-                          <span style={{ 
-                            background: 'rgba(255, 255, 255, 0.9)', 
-                            color: avail > 0 ? '#10B981' : '#EF4444', 
-                            fontSize: '0.8rem', 
-                            fontWeight: 'bold', 
-                            padding: '4px 8px', 
-                            borderRadius: '20px',
-                            boxShadow: '0 2px 8px rgba(0,0,0,0.1)'
-                          }}>
-                            {inMaint ? 'Blocked' : `${avail} Available`}
+                          <span className={`room-avail-badge ${availCount > 0 ? 'room-avail-badge--green' : 'room-avail-badge--red'}`}>
+                            {inMaint ? '🔧 Blocked' : `${availCount} Available`}
                           </span>
                         </div>
+                        {inMaint && (
+                          <div style={{ position:'absolute', inset:0, background:'rgba(0,0,0,0.45)', display:'flex', alignItems:'center', justifyContent:'center' }}>
+                            <span style={{ color:'#FFF', fontWeight:700, fontSize:'1rem', letterSpacing:'0.05em', textShadow:'0 2px 6px rgba(0,0,0,0.5)' }}>MAINTENANCE</span>
+                          </div>
+                        )}
                       </div>
                       
-                      {/* Body matching guest view */}
-                      <div style={{ padding: '20px', display: 'flex', flexDirection: 'column', gap: '12px', flex: 1 }}>
+                      {/* Body */}
+                      <div style={{ padding: '18px 20px 20px', display: 'flex', flexDirection: 'column', gap: '10px', flex: 1 }}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                          <h3 className="room-name" style={{ margin: 0, fontFamily: 'Playfair Display, serif', fontSize: '1.2rem', color: '#1E293B', fontWeight: 800 }}>
-                            {room.name}
-                          </h3>
+                          <h3 className="room-name" style={{ margin: 0, fontSize: '1.15rem' }}>{room.name}</h3>
+                          <span className="room-price">KES {(room.price||0).toLocaleString()}</span>
                         </div>
                         
-                        <p style={{ fontSize: '0.85rem', color: '#64748B', lineHeight: 1.5, margin: 0, height: 60, overflow: 'hidden', textOverflow: 'ellipsis', display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical' }}>
+                        <p style={{ fontSize: '0.83rem', color: 'var(--text-muted)', lineHeight: 1.55, margin: 0, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow:'hidden' }}>
                           {room.description}
                         </p>
                         
-                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '8px', background: '#F8FAFC', padding: '10px', borderRadius: '12px', textAlign: 'center', border: '1px solid #F1F5F9' }}>
-                          <div style={{ display: 'flex', flexDirection: 'column' }}>
-                            <span style={{ fontSize: '0.65rem', color: '#94A3B8', fontWeight: 700, textTransform: 'uppercase' }}>Total</span>
-                            <span style={{ fontSize: '1.1rem', fontWeight: 800, color: '#1E293B' }}>{room.total_rooms}</span>
+                        {/* Stats row */}
+                        <div className="room-stats">
+                          <div className="room-stat-box">
+                            <span className="room-stat-lbl">Total</span>
+                            <span className="room-stat-val">{totalRooms}</span>
                           </div>
-                          <div style={{ display: 'flex', flexDirection: 'column' }}>
-                            <span style={{ fontSize: '0.65rem', color: '#94A3B8', fontWeight: 700, textTransform: 'uppercase' }}>Booked</span>
-                            <span style={{ fontSize: '1.1rem', fontWeight: 800, color: '#1E293B' }}>{room.booked}</span>
+                          <div className="room-stat-box" style={{ borderLeft:'1px solid rgba(0,0,0,0.06)', borderRight:'1px solid rgba(0,0,0,0.06)' }}>
+                            <span className="room-stat-lbl">Booked</span>
+                            <span className="room-stat-val" style={{ color: bookedCount > 0 ? '#F59E0B' : '#10B981' }}>{bookedCount}</span>
                           </div>
-                          <div style={{ display: 'flex', flexDirection: 'column' }}>
-                            <span style={{ fontSize: '0.65rem', color: '#94A3B8', fontWeight: 700, textTransform: 'uppercase' }}>Avail</span>
-                            <span style={{ fontSize: '1.1rem', fontWeight: 800, color: avail > 0 ? '#10B981' : '#EF4444' }}>{avail}</span>
+                          <div className="room-stat-box">
+                            <span className="room-stat-lbl">Free</span>
+                            <span className="room-stat-val" style={{ color: availCount > 0 ? '#10B981' : '#EF4444' }}>{availCount}</span>
                           </div>
                         </div>
-                        
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 'auto', paddingTop: '8px' }}>
-                          <div>
-                            <span style={{ fontSize: '0.75rem', color: '#94A3B8', textTransform: 'uppercase', fontWeight: 600 }}>From </span>
-                            <strong style={{ color: '#10B981', fontSize: '1.25rem', fontWeight: 700 }}>KES {room.price.toLocaleString()}</strong>
-                            <span style={{ fontSize: '0.75rem', color: '#94A3B8' }}>/nt</span>
+
+                        {/* Occupancy indicator */}
+                        <div style={{ display:'flex', alignItems:'center', gap:8 }}>
+                          <div style={{ flex:1, height:6, borderRadius:99, background:'#F1F5F9', overflow:'hidden' }}>
+                            <div style={{ height:'100%', width:`${occupancyPct}%`, borderRadius:99, background: occupancyPct > 80 ? '#EF4444' : occupancyPct > 50 ? '#F59E0B' : '#10B981', transition:'width 0.6s ease' }} />
                           </div>
-                          {inMaint && <Tag color="error">Maintenance</Tag>}
+                          <span style={{ fontSize:'0.75rem', fontWeight:700, color:'var(--text-muted)', minWidth:32 }}>{occupancyPct}%</span>
                         </div>
                         
-                        <div style={{ display: 'flex', gap: 8, marginTop: 12, borderTop: '1px solid rgba(0,0,0,0.05)', paddingTop: 12 }}>
-                          <Button style={{ flex: 1 }} type="primary" onClick={() => handleOpenRoomEdit(room)}>
-                            Edit details
-                          </Button>
-                          <Button style={{ flex: 1 }} danger={!inMaint} onClick={() => {
-                            setMaintenance(p => { const n = new Set(p); n.has(room.id) ? n.delete(room.id) : n.add(room.id); return n; });
-                            message.info(inMaint ? 'Room activated' : 'Blocked for maintenance.');
-                          }}>
-                            {inMaint ? 'Activate' : 'Block'}
-                          </Button>
+                        {/* Action buttons */}
+                        <div style={{ display: 'flex', gap: 8, marginTop: 4, borderTop: '1px solid rgba(0,0,0,0.05)', paddingTop: 12 }}>
+                          <button className="room-action-btn room-action-btn--primary" onClick={() => handleOpenRoomEdit(room)}>
+                            <i className="bi bi-pencil-square" /> Edit
+                          </button>
+                          <button
+                            className={`room-action-btn ${inMaint ? 'room-action-btn--activate' : 'room-action-btn--block'}`}
+                            onClick={() => {
+                              setMaintenance(p => { const n = new Set(p); n.has(room.id) ? n.delete(room.id) : n.add(room.id); return n; });
+                              message.info(inMaint ? 'Room activated' : 'Blocked for maintenance.');
+                            }}
+                          >
+                            <i className={`bi ${inMaint ? 'bi-check-circle' : 'bi-tools'}`} /> {inMaint ? 'Activate' : 'Block'}
+                          </button>
                         </div>
                       </div>
                     </div>
@@ -649,11 +935,6 @@ const AdminPage = () => {
           {/* ── INQUIRIES ── */}
           {view === 'inquiries' && (
             <motion.div key="inq" className="view-wrap" initial={{opacity:0,y:12}} animate={{opacity:1,y:0}} exit={{opacity:0}} transition={{duration:0.3}}>
-              <div className="view-header">
-                <div><h1 className="view-title">Guest Inquiries</h1>
-                <p className="view-subtitle">{contacts.length} message{contacts.length!==1?'s':''} received</p></div>
-                <Button onClick={fetchData} loading={loading} icon={<i className="bi bi-arrow-clockwise"/>}>Refresh</Button>
-              </div>
               <Card className="admin-card-style">
                 <div style={{marginBottom:14}}>
                   <Input.Search placeholder="Search inquiries..." value={inqSearch} onChange={e=>setInqSearch(e.target.value)} style={{maxWidth:280}}/>
@@ -665,6 +946,7 @@ const AdminPage = () => {
                     return !q||[c.first_name,c.last_name,c.email,c.phone,c.message].some(f=>f?.toLowerCase().includes(q));
                   })}
                   rowKey="id" loading={loading} pagination={{pageSize:10}} className="sv-admin-table" size="middle"
+                  scroll={{ x: 900 }}
                 />
               </Card>
             </motion.div>
@@ -673,10 +955,6 @@ const AdminPage = () => {
           {/* ── REPORTS ── */}
           {view === 'reports' && (
             <motion.div key="rep" className="view-wrap" initial={{opacity:0,y:12}} animate={{opacity:1,y:0}} exit={{opacity:0}} transition={{duration:0.3}}>
-              <div className="view-header">
-                <div><h1 className="view-title">Reports</h1>
-                <p className="view-subtitle">Operational summaries and performance indicators.</p></div>
-              </div>
               <div className="report-section">
                 <Card title="Today's Operations" className="admin-card-style">
                   {[
@@ -705,30 +983,145 @@ const AdminPage = () => {
             </motion.div>
           )}
 
+          {/* ── GALLERY ── */}
+          {view === 'gallery' && (
+            <motion.div key="gal" className="view-wrap" initial={{opacity:0,y:12}} animate={{opacity:1,y:0}} exit={{opacity:0}} transition={{duration:0.3}}>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: 24, marginBottom: 32 }}>
+                <Card className="admin-card-style" title="Upload New Image">
+                  <div style={{ padding: '8px 0' }}>
+                    <Upload.Dragger
+                      customRequest={handleGalleryUpload}
+                      showUploadList={false}
+                      accept="image/*"
+                      disabled={uploadingGallery}
+                    >
+                      <p className="ant-upload-drag-icon" style={{ fontSize: '2.5rem', color: 'var(--primary-blue)', marginBottom: 8 }}>
+                        {uploadingGallery ? <Spin /> : <i className="bi bi-cloud-arrow-up" />}
+                      </p>
+                      <p className="ant-upload-text" style={{ fontSize: '1rem', fontWeight: 600, color: 'var(--text-main)' }}>
+                        {uploadingGallery ? 'Uploading and compressing image...' : 'Click or drag image to this area to upload'}
+                      </p>
+                      <p className="ant-upload-hint" style={{ fontSize: '0.82rem', color: 'var(--text-muted)' }}>
+                        Supports JPG, JPEG, PNG and WEBP. Maximum file size: 3 MB. Large images are automatically optimized.
+                      </p>
+                    </Upload.Dragger>
+                  </div>
+                </Card>
+
+                <Card className="admin-card-style" title={`Gallery Images (${galleryList.length})`}>
+                  {galleryList.length === 0 ? (
+                    <div style={{ padding: '40px 0', textAlign: 'center', color: 'var(--text-muted)' }}>
+                      <i className="bi bi-images" style={{ fontSize: '3rem', display: 'block', marginBottom: 12, opacity: 0.3 }} />
+                      No uploaded gallery images found. Default asset images are being displayed to guests.
+                    </div>
+                  ) : (
+                    <div className="gallery-grid">
+                      {galleryList.map(img => {
+                        const url = img.image_url;
+                        const resolvedUrl = url.startsWith('/uploads/') ? `${API_BASE}${url}` : url;
+                        return (
+                          <div key={img.id} className="gallery-item">
+                            <img src={resolvedUrl} alt="Gallery Item" />
+                            {/* Floating delete icon — appears on hover */}
+                            <Popconfirm
+                              title="Delete this image?"
+                              description="This will permanently remove it from the guest gallery."
+                              onConfirm={() => handleDeleteGallery(img.id)}
+                              okText="Yes, Delete"
+                              cancelText="Cancel"
+                              okButtonProps={{ danger: true }}
+                            >
+                              <button className="gallery-delete-btn" title="Delete image">
+                                <i className="bi bi-trash" />
+                              </button>
+                            </Popconfirm>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </Card>
+              </div>
+            </motion.div>
+          )}
+
           {/* ── USERS ── */}
           {view === 'users' && (
             <motion.div key="usr" className="view-wrap" initial={{opacity:0,y:12}} animate={{opacity:1,y:0}} exit={{opacity:0}} transition={{duration:0.3}}>
-              <div className="view-header">
-                <div><h1 className="view-title">Users</h1>
-                <p className="view-subtitle">Manage staff accounts and access permissions.</p></div>
-                <Button type="primary" onClick={()=>setUserOpen(true)} style={{background:'#0F8F46',border:'none'}}>
-                  <i className="bi bi-person-plus" style={{marginRight:6}} /> Add User
-                </Button>
-              </div>
               <Card className="admin-card-style">
                 <Table dataSource={users} rowKey="id" pagination={false} size="middle"
+                  className="sv-admin-table"
                   columns={[
+                    { title:'ID',       dataIndex:'id',       key:'id', width:60 },
                     { title:'Username', dataIndex:'username', key:'u' },
                     { title:'Role',     dataIndex:'role',     key:'r' },
-                    { title:'Status',   dataIndex:'status',   key:'s', render:s=><Tag color={s==='active'?'success':'error'}>{s}</Tag> },
+                    { title:'Status',   dataIndex:'status',   key:'s',
+                      render: s => {
+                        const isActive = s?.toLowerCase() === 'active';
+                        return <Tag color={isActive ? 'success' : 'error'}>{s}</Tag>;
+                      }
+                    },
+                    { title:'Last Login', dataIndex:'last_login', key:'ll',
+                      render: v => v ? dayjs(v).format('DD MMM YYYY HH:mm') : '—'
+                    },
                     { title:'Actions',  key:'act', render:(_,r)=>(
-                      <div style={{display:'flex',gap:8}}>
-                        {r.username!=='admin' && (
-                          <Button size="small" danger={r.status==='active'} onClick={()=>{
-                            setUsers(p=>p.map(u=>u.id===r.id?{...u,status:u.status==='active'?'disabled':'active'}:u));
-                            message.info('Status updated.');
-                          }}>{r.status==='active'?'Disable':'Enable'}</Button>
-                        )}
+                      <div style={{display:'flex',gap:6,flexWrap:'wrap'}}>
+                        {/* Edit */}
+                        <Button size="small" onClick={() => {
+                          setEditUserTarget(r);
+                          editUserForm.setFieldsValue({ username: r.username, role: r.role });
+                          setEditUserOpen(true);
+                        }}><i className="bi bi-pencil" /></Button>
+
+                        {/* Reset Password */}
+                        <Button size="small" onClick={() => {
+                          setResetPwdTarget(r);
+                          resetPwdForm.resetFields();
+                          setResetPwdOpen(true);
+                        }}><i className="bi bi-key" /></Button>
+
+                        {/* Enable / Disable */}
+                        <Button
+                          size="small"
+                          danger={r.status?.toLowerCase() === 'active'}
+                          onClick={() => {
+                            setLoading(true);
+                            const nextStatus = r.status?.toLowerCase() === 'active' ? 'Disabled' : 'Active';
+                            axios.put(`${API_BASE}/api/users/${r.id}/status`, { status: nextStatus })
+                              .then(res => {
+                                if (res.data.status === 'success') { message.success('Status updated.'); fetchData(); }
+                                else message.error(res.data.message || 'Failed.');
+                              })
+                              .catch(err => message.error(err.response?.data?.message || 'Error.'))
+                              .finally(() => setLoading(false));
+                          }}
+                        >{r.status?.toLowerCase() === 'active' ? 'Disable' : 'Enable'}</Button>
+
+                        {/* Delete */}
+                        <Popconfirm
+                          title="Delete this user?"
+                          description="This action cannot be undone."
+                          okText="Yes, Delete" cancelText="Cancel"
+                          okButtonProps={{ danger: true }}
+                          onConfirm={() => {
+                            // Prefer stored ID; fall back to matching username in the loaded users list
+                            const storedId = localStorage.getItem('adminUserId');
+                            const storedUsername = localStorage.getItem('adminUsername');
+                            const currentId = storedId
+                              ? storedId
+                              : (users.find(u => u.username === storedUsername)?.id ?? null);
+                            setLoading(true);
+                            axios.delete(`${API_BASE}/api/users/${r.id}`, { data: { current_user_id: currentId } })
+                              .then(res => {
+                                if (res.data.status === 'success') { message.success('User deleted.'); fetchData(); }
+                                else message.error(res.data.message || 'Failed to delete.');
+                              })
+                              .catch(err => message.error(err.response?.data?.message || 'Error deleting.'))
+                              .finally(() => setLoading(false));
+                          }}
+                        >
+                          <Button size="small" danger><i className="bi bi-trash" /></Button>
+                        </Popconfirm>
                       </div>
                     )}
                   ]}
@@ -739,15 +1132,36 @@ const AdminPage = () => {
 
           {/* ── SETTINGS ── */}
           {view === 'settings' && (
-            <motion.div key="set" className="view-wrap" initial={{opacity:0,y:12}} animate={{opacity:1,y:0}} exit={{opacity:0}} transition={{duration:0.3}}>
-              <div className="view-header">
-                <div><h1 className="view-title">Settings</h1>
-                <p className="view-subtitle">Resort configuration and operating parameters.</p></div>
-              </div>
+            <motion.div 
+            key="set"
+            className="view-wrap"
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.3 }}
+            whileHover={{
+              y: -6,
+              scale: 1.01,
+            }}>
               <Card className="admin-card-style" style={{maxWidth:560}}>
                 <Form layout="vertical" form={settingsForm}
                   initialValues={{ resortName:'Shanvilla Resort', phone:'0742682580', email:'info@shanvilla.com', checkinTime:'14:00', checkoutTime:'10:00', cancellationPolicy:'Free cancellation up to 24 hours before check-in.' }}
-                  onFinish={()=>message.success('Settings saved.')}>
+                  onFinish={async (values) => {
+                    try {
+                      setLoading(true);
+                      const res = await axios.post(`${API_BASE}/api/settings`, values);
+                      if (res.data.status === 'success') {
+                        message.success('Settings saved successfully.');
+                      } else {
+                        message.error(res.data.message || 'Failed to save settings.');
+                      }
+                    } catch (err) {
+                      console.error(err);
+                      message.error('An error occurred while saving settings.');
+                    } finally {
+                      setLoading(false);
+                    }
+                  }}>
                   <Form.Item label="Resort Name" name="resortName"><Input /></Form.Item>
                   <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:12}}>
                     <Form.Item label="Email" name="email"><Input /></Form.Item>
@@ -758,7 +1172,7 @@ const AdminPage = () => {
                   <Form.Item label="Cancellation Policy" name="cancellationPolicy">
                     <Input.TextArea rows={3} />
                   </Form.Item>
-                  <Button type="primary" htmlType="submit" style={{background:'#0F8F46',border:'none'}}>Save Settings</Button>
+                  <Button type="primary" htmlType="submit" className="btn-danger" style={{height:44}}>Save Settings</Button>
                 </Form>
               </Card>
             </motion.div>
@@ -778,7 +1192,7 @@ const AdminPage = () => {
             <Button size="small" onClick={()=>openEdit(selected)}>Edit</Button>
             {(STATUS_ACTIONS[selected.status?.toLowerCase()]||[]).map(a=>(
               <Button key={a.key} size="small" type="primary" danger={a.danger}
-                style={!a.danger?{background:'#0F8F46',border:'none'}:{}}
+                className={!a.danger ? 'btn-blue' : ''}
                 onClick={()=>changeStatus(selected.id,a.key)}>{a.label}</Button>
             ))}
           </div>
@@ -786,8 +1200,8 @@ const AdminPage = () => {
         {selected && (
           <div style={{display:'flex',flexDirection:'column',gap:18}}>
             <div>
-              <h3 style={{margin:0,fontFamily:'Playfair Display,serif',color:'#1E3A5B',fontSize:'1.2rem'}}>{selected.guest_name}</h3>
-              <span style={{fontSize:'0.82rem',color:'#94A3B8'}}>Ref: <strong style={{color:'#C6A355'}}>{selected.booking_reference}</strong></span>
+              <h3 style={{margin:0,fontFamily:'Playfair Display,serif',color:'var(--text-main)',fontSize:'1.2rem'}}>{selected.guest_name}</h3>
+              <span style={{fontSize:'0.82rem',color:'var(--text-muted)'}}>Ref: <strong style={{color:'var(--primary-blue)'}}>{selected.booking_reference}</strong></span>
             </div>
 
             <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:12}}>
@@ -803,14 +1217,14 @@ const AdminPage = () => {
                 ['Booked At',  dayjs(selected.created_at).format('YYYY-MM-DD HH:mm')],
               ].map(([lbl,val])=>(
                 <div key={lbl}>
-                  <span style={{fontSize:'0.73rem',color:'#94A3B8',textTransform:'uppercase',fontWeight:600}}>{lbl}</span>
-                  <p style={{margin:'3px 0 0',fontSize:'0.92rem',color:'#1E3A5B'}}>{val}</p>
+                  <span style={{fontSize:'0.73rem',color:'var(--text-muted)',textTransform:'uppercase',fontWeight:600}}>{lbl}</span>
+                  <p style={{margin:'3px 0 0',fontSize:'0.92rem',color:'var(--text-main)'}}>{val}</p>
                 </div>
               ))}
             </div>
 
             <div>
-              <span style={{fontSize:'0.73rem',color:'#94A3B8',textTransform:'uppercase',fontWeight:600}}>Admin Notes</span>
+              <span style={{fontSize:'0.73rem',color:'var(--text-muted)',textTransform:'uppercase',fontWeight:600}}>Admin Notes</span>
               <Input.TextArea style={{marginTop:6}} rows={2} value={selected.admin_notes||''}
                 onChange={e=>setSelected(p=>({...p,admin_notes:e.target.value}))}
                 placeholder="VIP requests, special arrangements..." />
@@ -823,7 +1237,7 @@ const AdminPage = () => {
 
             {history.length > 0 && (
               <div>
-                <span style={{fontSize:'0.73rem',color:'#94A3B8',textTransform:'uppercase',fontWeight:600,display:'block',marginBottom:10}}>
+                <span style={{fontSize:'0.73rem',color:'var(--text-muted)',textTransform:'uppercase',fontWeight:600,display:'block',marginBottom:10}}>
                   Audit Trail
                 </span>
                 <Timeline items={history.map(h=>({
@@ -831,7 +1245,7 @@ const AdminPage = () => {
                   children: (
                     <div>
                       <span>→ <strong>{fmt(h.new_status)}</strong></span>
-                      <div style={{fontSize:'0.76rem',color:'#94A3B8',marginTop:2}}>
+                      <div style={{fontSize:'0.76rem',color:'var(--text-muted)',marginTop:2}}>
                         by {h.changed_by||'system'} · {dayjs(h.changed_at).format('YYYY-MM-DD HH:mm')}
                       </div>
                     </div>
@@ -843,7 +1257,7 @@ const AdminPage = () => {
         )}
       </Drawer>
 
-      {/* ── EDIT MODAL ── */}
+      {/* ── EDIT BOOKING MODAL ── */}
       <Modal title="Edit Booking" open={editOpen} onCancel={()=>setEditOpen(false)} footer={null} destroyOnClose width={540}>
         <Form layout="vertical" form={editForm} onFinish={submitEdit}>
           <Form.Item label="Guest Name" name="guest_name" rules={[{required:true}]}><Input /></Form.Item>
@@ -859,36 +1273,99 @@ const AdminPage = () => {
             <DatePicker.RangePicker style={{width:'100%'}} />
           </Form.Item>
           <Form.Item label="Notes" name="admin_notes"><Input.TextArea rows={2} /></Form.Item>
-          <Button type="primary" htmlType="submit" block style={{background:'#0F8F46',border:'none'}}>Save Changes</Button>
+          <Button type="primary" htmlType="submit" block className="btn-blue" style={{height:44}}>Save Changes</Button>
         </Form>
       </Modal>
 
       {/* ── ROOM EDIT MODAL ── */}
-      <Modal title="Edit Room Details" open={!!editRoom} onCancel={()=>setEditRoom(null)} footer={null} destroyOnClose width={560}>
+      <Modal
+        title="Edit Room Details"
+        open={!!editRoom}
+        onCancel={()=>setEditRoom(null)}
+        footer={null}
+        destroyOnClose
+        width={640}
+        className="room-edit-modal"
+      >
         {editRoom && (
-          <Form layout="vertical" form={roomForm} onFinish={handleSaveRoomEdit}>
-            <Form.Item label="Room Type Name" name="name" rules={[{required:true, message: 'Please enter the room name'}]}><Input /></Form.Item>
-            <Form.Item label="Image URL / Key (e.g. pic5, room1, or external http link)" name="image_url" rules={[{required:true, message: 'Please enter the image URL or key'}]}><Input /></Form.Item>
-            <Form.Item label="Starting Price (KES)" name="price" rules={[{required:true, message: 'Please enter the starting price'}]}><Input type="number" /></Form.Item>
-            <Form.Item label="Description" name="description" rules={[{required:true, message: 'Please enter the description'}]}><Input.TextArea rows={3} /></Form.Item>
-            
-            <h4 style={{ margin: '18px 0 10px', fontSize: '0.95rem', fontWeight: 700, color: '#1E293B' }}>Pricing Plans (KES)</h4>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '12px' }}>
-              <Form.Item label="Bed & Breakfast" name="price_bb" rules={[{required:true}]}><Input type="number" /></Form.Item>
-              <Form.Item label="Half Board" name="price_hb" rules={[{required:true}]}><Input type="number" /></Form.Item>
-              <Form.Item label="Full Board" name="price_fb" rules={[{required:true}]}><Input type="number" /></Form.Item>
-            </div>
-            
-            <Form.Item label="Room Amenities" name="selected_amenities">
-              <Select mode="multiple" placeholder="Select amenities" style={{ width: '100%' }} maxTagCount="responsive">
-                {COMMON_AMENITIES.map(a => (
-                  <Select.Option key={a.value} value={a.value}>{a.label}</Select.Option>
-                ))}
-              </Select>
-            </Form.Item>
-            
-            <Button type="primary" htmlType="submit" block style={{ height: 44, marginTop: 12 }}>Update Room Details</Button>
-          </Form>
+          <div className="room-edit-modal-body">
+            <Form layout="vertical" form={roomForm} onFinish={handleSaveRoomEdit}>
+              <Form.Item label="Room Type Name" name="name" rules={[{required:true, message: 'Please enter the room name'}]}><Input /></Form.Item>
+
+              {/* Image preview — compact thumbnail */}
+              {roomImagePreview && (
+                <div className="room-image-preview-container">
+                  <img src={roomImagePreview} alt="Room Preview" className="room-image-preview" />
+                  <div className="room-image-preview-label">
+                    <i className="bi bi-image" style={{ marginRight: 6, color: 'var(--primary-blue)' }} />
+                    Current image preview
+                  </div>
+                </div>
+              )}
+
+              {/* Upload area */}
+              <div className="room-upload-section">
+                <Upload.Dragger
+                  customRequest={handleImageUpload}
+                  showUploadList={false}
+                  accept="image/*"
+                  disabled={uploadingImage}
+                  style={{ marginBottom: 12 }}
+                >
+                  <div style={{ padding: '12px 0' }}>
+                    {uploadingImage ? (
+                      <div>
+                        <Spin style={{ marginBottom: 8 }} />
+                        <p style={{ margin: 0, fontSize: '0.88rem', color: 'var(--text-muted)' }}>Uploading... {uploadProgress}%</p>
+                        <Progress percent={uploadProgress} size="small" showInfo={false} strokeColor="var(--primary-blue)" style={{ padding: '0 32px', marginTop: 4 }} />
+                      </div>
+                    ) : (
+                      <>
+                        <i className="bi bi-cloud-arrow-up" style={{ fontSize: '1.8rem', color: 'var(--primary-blue)' }} />
+                        <p style={{ margin: '4px 0 0', fontSize: '0.88rem', fontWeight: 600, color: 'var(--text-main)' }}>
+                          Click or drag image here to upload
+                        </p>
+                        <p style={{ margin: '2px 0 0', fontSize: '0.78rem', color: 'var(--text-muted)' }}>
+                          JPG, PNG, WEBP · Max 3 MB · Mobile camera supported
+                        </p>
+                      </>
+                    )}
+                  </div>
+                </Upload.Dragger>
+
+                <Form.Item label="Or enter image key / URL manually" name="image_url" rules={[{required:true, message: 'Please provide an image'}]} style={{ margin: 0 }}>
+                  <Input placeholder="e.g. pic5, room1, or https://..." onChange={(e) => {
+                    const val = e.target.value;
+                    const previewUrl = IMAGE_MAP[val] || (val?.startsWith('/uploads/') ? `${API_BASE}${val}` : val);
+                    setRoomImagePreview(previewUrl);
+                  }} />
+                </Form.Item>
+              </div>
+
+              <Form.Item label="Starting Price (KES)" name="price" rules={[{required:true, message: 'Please enter the starting price'}]}><Input type="number" /></Form.Item>
+              <Form.Item label="Description" name="description" rules={[{required:true, message: 'Please enter the description'}]}><Input.TextArea rows={3} /></Form.Item>
+              
+              <h4 style={{ margin: '18px 0 10px', fontSize: '0.95rem', fontWeight: 700, color: 'var(--text-main)' }}>Pricing Plans (KES)</h4>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '12px' }}>
+                <Form.Item label="Bed & Breakfast" name="price_bb" rules={[{required:true}]}><Input type="number" /></Form.Item>
+                <Form.Item label="Half Board" name="price_hb" rules={[{required:true}]}><Input type="number" /></Form.Item>
+                <Form.Item label="Full Board" name="price_fb" rules={[{required:true}]}><Input type="number" /></Form.Item>
+              </div>
+              
+              <Form.Item label="Room Amenities" name="selected_amenities">
+                <Select mode="multiple" placeholder="Select amenities" style={{ width: '100%' }} maxTagCount="responsive">
+                  {COMMON_AMENITIES.map(a => (
+                    <Select.Option key={a.value} value={a.value}>{a.label}</Select.Option>
+                  ))}
+                </Select>
+              </Form.Item>
+
+              <div className="room-edit-modal-footer">
+                <Button onClick={() => setEditRoom(null)} style={{ flex: 1, height: 44 }}>Cancel</Button>
+                <Button type="primary" htmlType="submit" className="btn-blue" style={{ flex: 2, height: 44 }}>Update Room Details</Button>
+              </div>
+            </Form>
+          </div>
         )}
       </Modal>
 
@@ -896,7 +1373,7 @@ const AdminPage = () => {
       <Modal title={`Reply to ${replyTarget?.first_name}`} open={replyOpen}
         onCancel={()=>{ setReplyOpen(false); setReplyText(''); }}
         onOk={()=>{ message.success(`Reply sent to ${replyTarget?.email}`); setRepliedSet(p=>new Set([...p,replyTarget.id])); setReplyOpen(false); setReplyText(''); }}
-        okText="Send Reply" okButtonProps={{style:{background:'#0F8F46',border:'none'}}} destroyOnClose>
+        okText="Send Reply" okButtonProps={{className:'btn-blue'}} destroyOnClose>
         {replyTarget && (
           <div>
             <div style={{background:'#F8FAFC',padding:12,borderRadius:8,marginBottom:12,fontSize:'0.88rem',color:'#475569'}}>
@@ -914,12 +1391,104 @@ const AdminPage = () => {
           <Form.Item label="Password" name="password" rules={[{required:true}]}><Input.Password /></Form.Item>
           <Form.Item label="Role" name="role" rules={[{required:true}]}>
             <Select>
-              <Select.Option value="Reception">Reception</Select.Option>
-              <Select.Option value="Manager">Manager</Select.Option>
-              <Select.Option value="Administrator">Administrator</Select.Option>
+              <Select.Option value="Admin">Admin</Select.Option>
+              <Select.Option value="Receptionist">Receptionist</Select.Option>
             </Select>
           </Form.Item>
-          <Button type="primary" htmlType="submit" block style={{background:'#0F8F46',border:'none'}}>Register Account</Button>
+          <Button type="primary" htmlType="submit" block className="btn-blue" style={{height:44}}>Register Account</Button>
+        </Form>
+      </Modal>
+
+      {/* ── EDIT USER MODAL ── */}
+      <Modal
+        title={`Edit User — ${editUserTarget?.username}`}
+        open={editUserOpen}
+        onCancel={() => { setEditUserOpen(false); setEditUserTarget(null); editUserForm.resetFields(); }}
+        footer={null}
+        destroyOnClose
+        width={420}
+      >
+        <Form layout="vertical" form={editUserForm} onFinish={async (vals) => {
+          try {
+            setLoading(true);
+            const res = await axios.put(`${API_BASE}/api/users/${editUserTarget.id}`, {
+              username: vals.username,
+              role: vals.role,
+            });
+            if (res.data.status === 'success') {
+              message.success('User updated.');
+              setEditUserOpen(false);
+              setEditUserTarget(null);
+              editUserForm.resetFields();
+              fetchData();
+            } else {
+              message.error(res.data.message || 'Failed to update user.');
+            }
+          } catch (err) {
+            message.error(err.response?.data?.message || 'Error updating user.');
+          } finally {
+            setLoading(false);
+          }
+        }}>
+          <Form.Item label="Username" name="username" rules={[{required:true, message:'Username is required'}]}>
+            <Input />
+          </Form.Item>
+          <Form.Item label="Role" name="role" rules={[{required:true}]}>
+            <Select>
+              <Select.Option value="Admin">Admin</Select.Option>
+              <Select.Option value="Receptionist">Receptionist</Select.Option>
+            </Select>
+          </Form.Item>
+          <Button type="primary" htmlType="submit" block className="btn-blue" style={{height:44}}>Save Changes</Button>
+        </Form>
+      </Modal>
+
+      {/* ── RESET PASSWORD MODAL ── */}
+      <Modal
+        title={`Reset Password — ${resetPwdTarget?.username}`}
+        open={resetPwdOpen}
+        onCancel={() => { setResetPwdOpen(false); setResetPwdTarget(null); resetPwdForm.resetFields(); }}
+        footer={null}
+        destroyOnClose
+        width={400}
+      >
+        <Form layout="vertical" form={resetPwdForm} onFinish={async (vals) => {
+          try {
+            setLoading(true);
+            const res = await axios.put(`${API_BASE}/api/users/${resetPwdTarget.id}/password`, {
+              password: vals.password,
+            });
+            if (res.data.status === 'success') {
+              message.success('Password reset successfully.');
+              setResetPwdOpen(false);
+              setResetPwdTarget(null);
+              resetPwdForm.resetFields();
+            } else {
+              message.error(res.data.message || 'Failed to reset password.');
+            }
+          } catch (err) {
+            message.error(err.response?.data?.message || 'Error resetting password.');
+          } finally {
+            setLoading(false);
+          }
+        }}>
+          <Form.Item label="New Password" name="password" rules={[{required:true, min:6, message:'Minimum 6 characters'}]}>
+            <Input.Password placeholder="Enter new password" />
+          </Form.Item>
+          <Form.Item
+            label="Confirm Password"
+            name="confirmPassword"
+            dependencies={['password']}
+            rules={[{required:true}, ({getFieldValue}) => ({
+              validator(_, value) {
+                if (!value || getFieldValue('password') === value) return Promise.resolve();
+                return Promise.reject(new Error('Passwords do not match!'));
+              }
+            })]}
+          >
+            <Input.Password placeholder="Confirm new password" />
+          </Form.Item>
+          <Button type="primary" htmlType="submit" block className="btn-blue" style={{height:44}}>Reset Password</Button>
         </Form>
       </Modal>
 

@@ -20,6 +20,10 @@ const Login = () => {
       if (res.data.status === 'success') {
         localStorage.setItem('adminToken', 'logged-in');
         localStorage.setItem('adminUsername', username);
+        // Store user ID if the backend returns it
+        if (res.data.user_id) {
+          localStorage.setItem('adminUserId', String(res.data.user_id));
+        }
         message.success('Welcome back, Admin!');
         navigate('/wp-adman');
       } else {

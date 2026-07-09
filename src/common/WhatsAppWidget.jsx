@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { FaWhatsapp, FaTimes } from "react-icons/fa";
 
@@ -6,7 +6,7 @@ const WhatsAppWidget = () => {
   const [showTooltip, setShowTooltip] = useState(true);
 
   // International format for +254 742 682580
-  const whatsappUrl = "https://wa.me/254742682580?text=Hi%20Shanvilla%20Resort,%20I'd%20like%20to%20inquire%20about%20a%20booking.";
+  const whatsappUrl = "https://wa.me/254111427894?text=Hi%20Shanvilla%20Resort,%20I'd%20like%20to%20inquire%20about%20a%20booking.";
 
   const closeTooltip = (e) => {
     e.stopPropagation();
@@ -32,7 +32,7 @@ const WhatsAppWidget = () => {
               </button>
             </div>
             <p style={styles.tooltipText}>Chat with us on WhatsApp for instant assistance!</p>
-            <div style={styles.tooltipNumber}>0742682580</div>
+            <div style={styles.tooltipNumber}>0111427894</div>
           </motion.div>
         )}
       </AnimatePresence>

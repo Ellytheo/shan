@@ -1,3 +1,4 @@
+import { useState, useEffect } from 'react';
 
 import img6 from "../images/shan2.jpg";
 import pic1 from "../images/pic1.jpg";
@@ -20,6 +21,8 @@ import pic17 from "../images/pic17.jpg";
 import pic18 from "../images/pic18.jpg";
 import pic19 from "../images/pic19.jpg";
 
+const API_BASE = 'https://shanvilla.pythonanywhere.com';
+
 const images = [
   img6,
   pic1, pic2, pic3, pic4, pic5,
@@ -29,6 +32,30 @@ const images = [
 ];
 
 const Gallery = () => {
+  const [galleryImages, setGalleryImages] = useState([]);
+
+  useEffect(() => {
+    const fetchGallery = async () => {
+      try {
+        const res = await fetch(`${API_BASE}/api/gallery`);
+        const data = await res.json();
+        if (data.status === 'success' && data.images && data.images.length > 0) {
+          const resolved = data.images.map(img => {
+            const url = img.image_url;
+            return url.startsWith('/uploads/') ? `${API_BASE}${url}` : url;
+          });
+          setGalleryImages(resolved);
+        } else {
+          setGalleryImages(images);
+        }
+      } catch (err) {
+        console.error("Error fetching gallery:", err);
+        setGalleryImages(images);
+      }
+    };
+    fetchGallery();
+  }, []);
+
   return (
     <div
       id="gallery"
@@ -57,16 +84,16 @@ const Gallery = () => {
       </h2>
      
       <div
-  className="gallery-grid"
-  style={{
-    display: "grid",
-    gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
-    maxWidth: "1000px", // 4 * 220px to center 4 columns
-    margin: "0 auto",  // center the grid
-    gap: "16px",
-  }}
->
-        {images.map((src, index) => (
+        className="gallery-grid"
+        style={{
+          display: "grid",
+          gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
+          maxWidth: "1000px", // 4 * 220px to center 4 columns
+          margin: "0 auto",  // center the grid
+          gap: "16px",
+        }}
+      >
+        {galleryImages.map((src, index) => (
           <div
             key={index}
             style={{
