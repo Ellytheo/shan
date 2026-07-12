@@ -1,10 +1,21 @@
 import axios from "axios";
 import { message } from "antd";
 
+// Helper to read cookies (for CSRF tokens)
+function getCookie(name) {
+  const value = `; ${document.cookie}`;
+  const parts = value.split(`; ${name}=`);
+  if (parts.length === 2) return parts.pop().split(";").shift();
+  return null;
+}
+
 const api = axios.create({
   baseURL: import.meta.env.VITE_API_URL,
   withCredentials: true, // Send HttpOnly JWT cookies on every request
   timeout: 15000,        // 15s — requests won't hang forever
+  // Automatically pull csrf_access_token and send as X-CSRF-TOKEN
+  xsrfCookieName: "csrf_access_token",
+  xsrfHeaderName: "X-CSRF-TOKEN",
 });
 
 // ----------------------------------------------------
@@ -73,7 +84,10 @@ api.interceptors.response.use(
       isRefreshing = true;
 
       try {
-        await api.post("/refresh");
+        const csrfRefresh = getCookie("csrf_refresh_token");
+        await api.post("/refresh", {}, {
+          headers: csrfRefresh ? { "X-CSRF-TOKEN": csrfRefresh } : {}
+        });
         processQueue(null);
         return api(originalRequest);
       } catch (refreshErr) {
