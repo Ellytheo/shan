@@ -22,7 +22,16 @@ const api = axios.create({
 // Request interceptor
 // ----------------------------------------------------
 api.interceptors.request.use(
-  (config) => config,
+  (config) => {
+    const method = config.method?.toLowerCase();
+    if (["post", "put", "delete", "patch"].includes(method)) {
+      const csrfToken = getCookie("csrf_access_token");
+      if (csrfToken && !config.headers["X-CSRF-TOKEN"]) {
+        config.headers["X-CSRF-TOKEN"] = csrfToken;
+      }
+    }
+    return config;
+  },
   (error) => Promise.reject(error)
 );
 

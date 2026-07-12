@@ -46,10 +46,12 @@ app.config["JWT_REFRESH_TOKEN_EXPIRES"] = timedelta(days=7)
 app.config["JWT_TOKEN_LOCATION"] = ["cookies"]
 
 # Cookie security
-# Change these to True when running under HTTPS in production.
-app.config["JWT_COOKIE_SECURE"] = True
+# Automatically disabled in local development to allow HTTP cookie storage.
+# Enabled with SameSite=None in production under HTTPS.
+is_dev = app.debug or os.environ.get("FLASK_ENV") == "development" or not os.environ.get("PYTHONANYWHERE_DOMAIN")
+app.config["JWT_COOKIE_SECURE"] = not is_dev
 app.config["JWT_COOKIE_HTTPONLY"] = True
-app.config["JWT_COOKIE_SAMESITE"] = "None"
+app.config["JWT_COOKIE_SAMESITE"] = "Lax" if is_dev else "None"
 
 # CSRF protection (we'll enable this later after everything works)
 app.config["JWT_COOKIE_CSRF_PROTECT"] = True
