@@ -14,18 +14,22 @@ const Login = () => {
   }, [user, navigate]);
 
   const onFinish = async ({ username, password }) => {
-    const result = await login(username, password);
+    try {
+      const result = await login(username, password);
 
-    if (result.ok) {
-      message.success('Welcome back!');
-      navigate('/wp-adman', { replace: true });
-    } else {
-      const code = result.message?.toLowerCase() ?? '';
-      if (code.includes('network') || code.includes('reach')) {
-        message.error('Network error — cannot reach the server.');
-      } else {
-        message.error(result.message || 'Invalid username or password.');
+      if (result.ok) {
+        message.success('Welcome back!');
+        navigate('/wp-adman', { replace: true });
       }
+    } catch (err) {
+      if (err.response?.status === 429) {
+        message.error(err.response.data.message);
+        return;
+      }
+
+      message.error(
+        err.response?.data?.message || "Login failed."
+      );
     }
   };
 

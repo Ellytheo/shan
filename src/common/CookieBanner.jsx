@@ -1,9 +1,18 @@
-import React, { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import ReactGA from "react-ga4";
 
 const CookieBanner = () => {
   const [visible, setVisible] = useState(false);
+
+  const initGA = () => {
+    try {
+      ReactGA.initialize("G-XXXXXXXXXX"); // ✅ Replace with your GA4 ID
+      ReactGA.send("pageview");
+    } catch (e) {
+      if (import.meta.env.DEV) console.warn("GA initialization failed", e);
+    }
+  };
 
   useEffect(() => {
     // Check if user has already made a choice
@@ -16,15 +25,6 @@ const CookieBanner = () => {
       initGA();
     }
   }, []);
-
-  const initGA = () => {
-    try {
-      ReactGA.initialize("G-XXXXXXXXXX"); // ✅ Replace with your GA4 ID
-      ReactGA.send("pageview");
-    } catch (e) {
-      console.warn("GA initialization failed", e);
-    }
-  };
 
   const handleAccept = () => {
     localStorage.setItem("analyticsConsent", "true");

@@ -4,6 +4,7 @@ import { FaWhatsapp, FaTimes } from "react-icons/fa";
 
 const WhatsAppWidget = () => {
   const [showTooltip, setShowTooltip] = useState(true);
+  const [closeBtnHovered, setCloseBtnHovered] = useState(false);
 
   // International format for +254 742 682580
   const whatsappUrl = "https://wa.me/254111427894?text=Hi%20Shanvilla%20Resort,%20I'd%20like%20to%20inquire%20about%20a%20booking.";
@@ -29,9 +30,14 @@ const WhatsAppWidget = () => {
               <span style={styles.tooltipTitle}>Need Assistance?</span>
               <motion.button 
                 onClick={closeTooltip} 
-                style={styles.closeBtn} 
+                style={{
+                  ...styles.closeBtn,
+                  backgroundColor: closeBtnHovered ? '#e53e3e' : 'transparent',
+                  color: closeBtnHovered ? '#ffffff' : '#718096',
+                }}
+                onMouseEnter={() => setCloseBtnHovered(true)}
+                onMouseLeave={() => setCloseBtnHovered(false)}
                 aria-label="Close tooltip"
-                whileHover={{ backgroundColor: "rgba(0,0,0,0.06)", color: "#1a202c" }}
               >
                 <FaTimes />
               </motion.button>

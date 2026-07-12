@@ -240,7 +240,7 @@ const AdminPage = () => {
 
       setConnStatus('ok');
     } catch (err) {
-      console.error(err);
+      if (import.meta.env.DEV) console.error('[fetchData]', err);
       setConnStatus('error');
       message.error('Cannot reach backend. Check server.');
     } finally {
@@ -276,7 +276,7 @@ const AdminPage = () => {
         setAuditActions([]);
       }
     } catch (error) {
-      console.error('Audit logs request failed:', error);
+      if (import.meta.env.DEV) console.error('[auditLogs]', error);
       setAuditLogs([]);
       setAuditTotal(0);
       setAuditActions([]);
@@ -451,7 +451,7 @@ const AdminPage = () => {
         onError(new Error(res.data.message || 'Upload failed'));
       }
     } catch (err) {
-      console.error(err);
+      if (import.meta.env.DEV) console.error('[uploadImage]', err);
       message.error(err.response?.data?.message || 'Error uploading image.');
       onError(err);
     } finally {
@@ -496,7 +496,7 @@ const AdminPage = () => {
         onError(new Error(uploadRes.data.message || 'Upload failed'));
       }
     } catch (err) {
-      console.error(err);
+      if (import.meta.env.DEV) console.error('[addGallery]', err);
       message.error(err.response?.data?.message || 'Error uploading gallery image.');
       onError(err);
     } finally {
@@ -514,7 +514,7 @@ const AdminPage = () => {
         message.error(res.data.message || 'Failed to delete image.');
       }
     } catch (error) {
-      console.error(error);
+      if (import.meta.env.DEV) console.error('[deleteGallery]', error);
       message.error('Error deleting image.');
     }
   };
@@ -1376,7 +1376,7 @@ const AdminPage = () => {
                         message.error(res.data.message || 'Failed to save settings.');
                       }
                     } catch (err) {
-                      console.error(err);
+                      if (import.meta.env.DEV) console.error('[saveSettings]', err);
                       message.error('An error occurred while saving settings.');
                     } finally {
                       setLoading(false);

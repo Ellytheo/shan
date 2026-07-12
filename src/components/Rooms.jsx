@@ -235,6 +235,7 @@ const RoomCard = ({ room, onViewDetails, liveCount, loading }) => {
 /* ─────────────────────────── ROOM DETAIL MODAL ─────────────────────────── */
 
 const RoomModal = ({ room, visible, onClose, liveCount }) => {
+  const [closeHovered, setCloseHovered] = useState(false);
   if (!room) return null;
   const soldOut = liveCount <= 0;
   return (
@@ -243,11 +244,25 @@ const RoomModal = ({ room, visible, onClose, liveCount }) => {
       onCancel={onClose}
       footer={null}
       width="min(90vw, 780px)"
-      styles={{ body: { padding: 0, overflow: 'visible' }, mask: { backdropFilter: 'blur(6px)', background: 'rgba(0,0,0,0.65)' } }}
+      styles={{
+        body: { padding: 0, overflow: 'visible', maxHeight: 'none' },
+        content: { background: 'transparent', boxShadow: 'none', padding: 0 },
+        mask: { backdropFilter: 'blur(6px)', background: 'rgba(0,0,0,0.65)' }
+      }}
       centered
       className="shanvilla-room-modal"
       closeIcon={
-        <span style={styles.modalCloseIcon} aria-label="Close modal">
+        <span
+          style={{
+            ...styles.modalCloseIcon,
+            background: closeHovered ? 'rgba(224, 59, 59, 0.95)' : 'rgba(14, 93, 158, 0.95)',
+            borderColor: closeHovered ? 'rgba(224, 59, 59, 0.4)' : 'rgba(224, 59, 59, 0.2)',
+            transform: closeHovered ? 'scale(1.08)' : 'scale(1)',
+          }}
+          onMouseEnter={() => setCloseHovered(true)}
+          onMouseLeave={() => setCloseHovered(false)}
+          aria-label="Close modal"
+        >
           <i className="bi bi-x-lg" />
         </span>
       }
@@ -262,7 +277,12 @@ const RoomModal = ({ room, visible, onClose, liveCount }) => {
             initial="hidden"
             animate="visible"
             exit="exit"
-            style={{ borderRadius: 24, overflowY: 'auto', maxHeight: '85vh', background: 'linear-gradient(160deg, #FFF1DD 0%, #FAD7A0 100%)' }}
+            style={{
+              borderRadius: 24,
+              background: 'linear-gradient(160deg, #f4f7fb 0%, #eef2f7 100%)',
+              boxShadow: '0 40px 80px rgba(0,0,0,0.35)',
+              overflow: 'hidden'
+            }}
           >
             {/* Hero Image */}
             <div style={{ position: 'relative', height: 'clamp(200px, 40vw, 340px)', overflow: 'hidden' }}>
@@ -386,14 +406,14 @@ const Rooms = () => {
           const mapped = data.rooms.map(r => ({
             ...r,
             startingPrice: r.price,
-            image: IMAGE_MAP[r.image_url] || (r.image_url?.startsWith('/uploads/') ? 'https://shanvilla.pythonanywhere.com' + r.image_url : r.image_url),
+            image: IMAGE_MAP[r.image_url] || (r.image_url?.startsWith('/uploads/') ? import.meta.env.VITE_API_URL + r.image_url : r.image_url),
           }));
           setRooms(mapped);
         } else {
           setRooms(ROOMS);
         }
       } catch (err) {
-        console.error("Error fetching rooms:", err);
+        if (import.meta.env.DEV) console.error('[fetchRooms]', err);
         setRooms(ROOMS);
       }
     };
@@ -486,40 +506,23 @@ const Rooms = () => {
           border-radius: 24px !important;
           padding: 0 !important;
           overflow: hidden;
-          max-width: 95vw !important;
-        }
-        /* Custom scrollbar for room details modal */
-        .shanvilla-room-modal ::-webkit-scrollbar {
-          width: 8px;
-        }
-        .shanvilla-room-modal ::-webkit-scrollbar-track {
-          background: rgba(198, 163, 85, 0.08);
-          border-radius: 10px;
-        }
-        .shanvilla-room-modal ::-webkit-scrollbar-thumb {
-          background: #C6A355;
-          border-radius: 10px;
-          border: 1px solid rgba(255, 255, 255, 0.45);
-          transition: background 0.3s ease;
-        }
-        .shanvilla-room-modal ::-webkit-scrollbar-thumb:hover {
-          background: #fa780e;
         }
         .shanvilla-room-modal .ant-modal-close {
           top: 14px !important;
           right: 14px !important;
           z-index: 10;
+          background: transparent !important;
+          border: none !important;
+          padding: 0 !important;
         }
-        .shanvilla-room-modal .ant-modal-close:hover span,
         .shanvilla-room-modal .ant-modal-close:hover {
-          background: rgba(224, 59, 59, 0.95) !important;
-          color: #FFFFFF !important;
-          border-color: rgba(224, 59, 59, 0.4) !important;          border-radius: 50% !important;        }
-        /* Responsive: modal and content */
+          background: transparent !important;
+        }
+
+        /* ── Mobile ── */
         @media (max-width: 767px) {
           .shanvilla-room-modal .ant-modal-content {
-            width: calc(100vw - 24px) !important;
-            margin: 12px auto !important;
+            border-radius: 16px !important;
           }
           .shanvilla-room-modal .ant-modal-close {
             top: 10px !important;
@@ -528,9 +531,12 @@ const Rooms = () => {
           .shanvilla-room-modal .ant-modal-body {
             padding: 0 !important;
           }
-          .shanvilla-room-modal .ant-modal-close:hover span,
-          .shanvilla-room-modal .ant-modal-close:hover {
-            background: rgba(224, 59, 59, 0.95) !important;
+        }
+
+        /* ── Very small screens ── */
+        @media (max-width: 380px) {
+          .shanvilla-room-modal .ant-modal-content {
+            border-radius: 12px !important;
           }
         }
       `}</style>

@@ -20,6 +20,8 @@ import Login from './common/Login';
 import AdminPage from './common/AdminPage';
 import ProtectedRoute from './common/ProtectedRoute';
 import { AuthProvider } from './context/AuthContext';
+import ErrorBoundary from './common/ErrorBoundary';
+import NotFound from './components/NotFound';
 
 function AppContent() {
   return (
@@ -42,28 +44,31 @@ function AppContent() {
 
 function App() {
   return (
-    <ThemeProvider theme={theme}>
-      <RoomAvailabilityProvider>
-        <BrowserRouter>
-          {/* AuthProvider must be inside BrowserRouter so it can use useNavigate */}
-          <AuthProvider>
-            <Routes>
-              <Route path="/terms"    element={<><Navbar /><TermsAndPrivacy /><Footer /></>} />
-              <Route path="/sponge"   element={<Login />} />
-              <Route
-                path="/wp-adman"
-                element={
-                  <ProtectedRoute>
-                    <AdminPage />
-                  </ProtectedRoute>
-                }
-              />
-              <Route path="/*" element={<AppContent />} />
-            </Routes>
-          </AuthProvider>
-        </BrowserRouter>
-      </RoomAvailabilityProvider>
-    </ThemeProvider>
+    <ErrorBoundary>
+      <ThemeProvider theme={theme}>
+        <RoomAvailabilityProvider>
+          <BrowserRouter>
+            {/* AuthProvider must be inside BrowserRouter so it can use useNavigate */}
+            <AuthProvider>
+              <Routes>
+                <Route path="/terms"    element={<><Navbar /><TermsAndPrivacy /><Footer /></>} />
+                <Route path="/sponge"   element={<Login />} />
+                <Route
+                  path="/wp-adman"
+                  element={
+                    <ProtectedRoute>
+                      <AdminPage />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route path="/" element={<AppContent />} />
+                <Route path="*" element={<NotFound />} />
+              </Routes>
+            </AuthProvider>
+          </BrowserRouter>
+        </RoomAvailabilityProvider>
+      </ThemeProvider>
+    </ErrorBoundary>
   );
 }
 

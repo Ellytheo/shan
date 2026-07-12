@@ -37,7 +37,7 @@ const ContactSection = () => {
         message.error(res.data.message || 'Something went wrong.');
       }
     } catch (err) {
-      console.error(err);
+      if (import.meta.env.DEV) console.error('[sendContact]', err);
       message.error('Failed to send message. Try again later.');
     } finally {
       setLoading(false);

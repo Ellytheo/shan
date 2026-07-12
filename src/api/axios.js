@@ -1,22 +1,22 @@
 import axios from "axios";
+import { message } from "antd";
 
 const api = axios.create({
-  baseURL: "https://shanvilla.pythonanywhere.com",
+  baseURL: import.meta.env.VITE_API_URL,
   withCredentials: true, // Send HttpOnly JWT cookies on every request
+  timeout: 15000,        // 15s — requests won't hang forever
 });
 
 // ----------------------------------------------------
-// Debug every outgoing request
+// Request interceptor
 // ----------------------------------------------------
 api.interceptors.request.use(
-  (config) => {
-    return config;
-  },
+  (config) => config,
   (error) => Promise.reject(error)
 );
 
 // ----------------------------------------------------
-// Response interceptor: auto-refresh on 401
+// Response interceptor: handle 401 / 403 / 429 / auto-refresh
 // ----------------------------------------------------
 let isRefreshing = false;
 let failedQueue = [];
@@ -37,17 +37,30 @@ api.interceptors.response.use(
 
   async (error) => {
     const originalRequest = error.config;
+    const status = error.response?.status;
 
+    // ── 429 Rate Limit ────────────────────────────────────────────────────────
+    if (status === 429) {
+      message.error(
+        error.response?.data?.message ||
+        "Too many attempts. Please try again later."
+      );
+      return Promise.reject(error);
+    }
+
+    // ── 403 Forbidden ─────────────────────────────────────────────────────────
+    if (status === 403) {
+      message.error("You do not have permission to perform this action.");
+      return Promise.reject(error);
+    }
+
+    // ── 401 Unauthorised — attempt token refresh ───────────────────────────────
     const isAuthEndpoint =
       originalRequest?.url?.includes("/login") ||
       originalRequest?.url?.includes("/refresh") ||
       originalRequest?.url?.includes("/logout");
 
-    if (
-      error.response?.status === 401 &&
-      !originalRequest._retry &&
-      !isAuthEndpoint
-    ) {
+    if (status === 401 && !originalRequest._retry && !isAuthEndpoint) {
       if (isRefreshing) {
         return new Promise((resolve, reject) => {
           failedQueue.push({ resolve, reject });
@@ -61,19 +74,15 @@ api.interceptors.response.use(
 
       try {
         await api.post("/refresh");
-
         processQueue(null);
-
         return api(originalRequest);
       } catch (refreshErr) {
-        console.error("Refresh failed:", refreshErr);
-
+        if (import.meta.env.DEV) {
+          console.error("Refresh failed:", refreshErr);
+        }
         processQueue(refreshErr);
-
         localStorage.removeItem("sv_user");
-
         window.dispatchEvent(new Event("sv:session-expired"));
-
         return Promise.reject(refreshErr);
       } finally {
         isRefreshing = false;

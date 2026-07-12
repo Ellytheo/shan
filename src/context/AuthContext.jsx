@@ -1,4 +1,4 @@
-import { createContext, useCallback, useContext, useEffect, useState } from 'react';
+import { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../api/axios';
 
@@ -7,6 +7,9 @@ import api from '../api/axios';
 // Real authentication lives in the HttpOnly JWT cookie set by the backend.
 // ─────────────────────────────────────────────────────────────────────────────
 const STORAGE_KEY = 'sv_user';
+
+// Auto-logout after 2 hours of inactivity
+const INACTIVITY_TIMEOUT_MS = 2 * 60 * 60 * 1000;
 
 function loadCachedUser() {
   try {
@@ -29,6 +32,30 @@ export function AuthProvider({ children }) {
   const [user, setUser]         = useState(loadCachedUser);
   const [isLoading, setLoading] = useState(false);
   const navigate                = useNavigate();
+  const inactivityTimer         = useRef(null);
+
+  // ── inactivity auto-logout ──────────────────────────────────────────────────
+  const resetInactivityTimer = useCallback(() => {
+    if (!user) return;
+    clearTimeout(inactivityTimer.current);
+    inactivityTimer.current = setTimeout(() => {
+      // Silently log out after 2 hours of no activity
+      setUser(null);
+      saveUser(null);
+      navigate('/sponge', { replace: true });
+    }, INACTIVITY_TIMEOUT_MS);
+  }, [user, navigate]);
+
+  useEffect(() => {
+    if (!user) return;
+    const events = ['mousemove', 'keydown', 'click', 'scroll', 'touchstart'];
+    events.forEach((e) => window.addEventListener(e, resetInactivityTimer));
+    resetInactivityTimer(); // start the timer immediately on mount / user change
+    return () => {
+      events.forEach((e) => window.removeEventListener(e, resetInactivityTimer));
+      clearTimeout(inactivityTimer.current);
+    };
+  }, [user, resetInactivityTimer]);
 
   // Listen for session-expired events fired by the axios interceptor
   useEffect(() => {
@@ -61,12 +88,6 @@ export function AuthProvider({ children }) {
       setUser(userData);
       saveUser(userData);
       return { ok: true };
-    } catch (err) {
-      const msg =
-        err?.response?.data?.message ||
-        err?.message ||
-        'Unknown error. Try again.';
-      return { ok: false, message: msg };
     } finally {
       setLoading(false);
     }
@@ -74,6 +95,7 @@ export function AuthProvider({ children }) {
 
   // ── logout ─────────────────────────────────────────────────────────────────
   const logout = useCallback(async () => {
+    clearTimeout(inactivityTimer.current);
     try {
       await api.post('/logout');
     } catch {
@@ -91,6 +113,7 @@ export function AuthProvider({ children }) {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// eslint-disable-next-line react-refresh/only-export-components
 export function useAuth() {
   const ctx = useContext(AuthContext);
   if (!ctx) throw new Error('useAuth must be used inside <AuthProvider>');

@@ -49,7 +49,7 @@ const Gallery = () => {
           setGalleryImages(images);
         }
       } catch (err) {
-        console.error("Error fetching gallery:", err);
+        if (import.meta.env.DEV) console.error('[fetchGallery]', err);
         setGalleryImages(images);
       }
     };

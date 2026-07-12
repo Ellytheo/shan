@@ -503,7 +503,7 @@ const BookingModal = ({ open, onClose, preRoom = null, createdBy = 'website' }) 
       }
       setAvailRooms(merged);
     } catch (err) {
-      console.error(err);
+      if (import.meta.env.DEV) console.error('[checkAvailability]', err);
       const errMsg = err.response?.data?.message || err.response?.data?.error || "Unable to check availability. Please try again.";
       message.error(errMsg);
     } finally {
@@ -548,7 +548,7 @@ const BookingModal = ({ open, onClose, preRoom = null, createdBy = 'website' }) 
       message.success("Booking confirmed!");
       bookForm.resetFields();
     } catch (err) {
-      console.error(err);
+      if (import.meta.env.DEV) console.error('[handleBooking]', err);
       const errMsg = err.response?.data?.message || err.response?.data?.error || "Booking could not be completed. Please try again.";
       message.error(errMsg);
     } finally {

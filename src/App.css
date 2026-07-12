@@ -501,3 +501,88 @@ button.ant-btn.user-action-btn:focus {
   border-color: #d9d9d9 !important;
   color: rgba(0, 0, 0, 0.88) !important;
 }
+
+/* ══════════════════════════════════════════════
+   GLOBAL RESPONSIVENESS — Production-ready fixes
+   ══════════════════════════════════════════════ */
+
+/* ── Tablet (≤ 1024px) ── */
+@media (max-width: 1024px) {
+  .homestead {
+    margin: 12px 16px;
+  }
+}
+
+/* ── Mobile (≤ 768px) ── */
+@media (max-width: 768px) {
+  /* Ensure no horizontal overflow */
+  body {
+    overflow-x: hidden;
+  }
+
+  /* Admin panel sidebar overlay fix */
+  .sv-admin-sidebar {
+    position: fixed !important;
+    z-index: 900 !important;
+  }
+
+  /* WhatsApp widget — shift slightly inward on mobile */
+  div[style*="position: fixed"][style*="bottom: 24"][style*="right: 24"] {
+    bottom: 16px !important;
+    right: 16px !important;
+  }
+
+  /* Cookie banner full-width on mobile */
+  div[style*="position: fixed"][style*="bottom: 24"][style*="width"] {
+    bottom: 0 !important;
+    right: 0 !important;
+    width: 100% !important;
+    border-radius: 16px 16px 0 0 !important;
+  }
+
+  /* Ant Design form items stack better */
+  .ant-form-item {
+    margin-bottom: 12px !important;
+  }
+
+  /* Ant Design modal full-width */
+  .ant-modal {
+    max-width: calc(100vw - 24px) !important;
+    margin: 12px auto !important;
+  }
+
+  /* Ant Design table horizontal scroll */
+  .ant-table-wrapper {
+    overflow-x: auto !important;
+  }
+
+  /* Better input sizing on mobile */
+  .custom-search-input,
+  .better-pwd-input {
+    font-size: 16px !important; /* prevents iOS zoom on focus */
+  }
+}
+
+/* ── Small mobile (≤ 480px) ── */
+@media (max-width: 480px) {
+  .homestead {
+    margin: 8px 8px;
+    padding: 8px;
+  }
+
+  /* Admin sidebar full-screen overlay on very small screens */
+  .ant-layout-sider {
+    position: fixed !important;
+    height: 100vh !important;
+    z-index: 999 !important;
+  }
+}
+
+/* ── Touch devices: remove hover states that linger ── */
+@media (hover: none) {
+  button.ant-btn.user-action-btn:hover {
+    background-color: transparent !important;
+    border-color: #d9d9d9 !important;
+    color: rgba(0, 0, 0, 0.88) !important;
+  }
+}

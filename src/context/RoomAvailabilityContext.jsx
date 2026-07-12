@@ -30,7 +30,7 @@ async function fetchFromApi() {
       return map;
     }
   } catch (e) {
-    console.warn('[RoomAvailability] API fetch failed, using fallback:', e.message);
+    if (import.meta.env.DEV) console.warn('[RoomAvailability] API fetch failed, using fallback:', e.message);
   }
   return null;
 }
@@ -56,7 +56,7 @@ export const RoomAvailabilityProvider = ({ children }) => {
   }, []);
 
   /* Fetch real counts on first mount */
-  useEffect(() => { refreshAvailability(); }, [refreshAvailability]);
+  useEffect(() => { setTimeout(() => refreshAvailability(), 0); }, [refreshAvailability]);
 
   return (
     <RoomAvailabilityContext.Provider value={{ availability, loading, decrementRoom, refreshAvailability }}>
@@ -65,6 +65,7 @@ export const RoomAvailabilityProvider = ({ children }) => {
   );
 };
 
+// eslint-disable-next-line react-refresh/only-export-components
 export const useRoomAvailability = () => {
   const ctx = useContext(RoomAvailabilityContext);
   if (!ctx) throw new Error('useRoomAvailability must be used inside RoomAvailabilityProvider');
