@@ -202,6 +202,27 @@ def add_security_headers(response):
     )
 
     return response
+
+# ─── TEMPORARY DEBUG ENDPOINT ─────────────────────────────────────────────────
+# Remove this route before going to production.
+@app.route("/api/debug-auth", methods=["GET"])
+@jwt_required(optional=True)
+def debug_auth():
+    """
+    Dumps cookie names, CSRF header, and JWT identity.
+    Call this from the browser or Postman to see what the backend actually receives.
+    """
+    identity = get_jwt_identity()
+    claims   = get_jwt()
+    return jsonify({
+        "jwt_identity":    identity,
+        "jwt_claims":      claims,
+        "cookies_received": list(request.cookies.keys()),
+        "csrf_header":     request.headers.get("X-CSRF-TOKEN", "<missing>"),
+        "is_authenticated": identity is not None,
+    }), 200
+# ──────────────────────────────────────────────────────────────────────────────
+
 # -----------------------------------------
 # Login rate-limit key
 # -----------------------------------------
