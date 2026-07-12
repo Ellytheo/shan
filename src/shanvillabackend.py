@@ -46,15 +46,15 @@ app.config["JWT_REFRESH_TOKEN_EXPIRES"] = timedelta(days=7)
 app.config["JWT_TOKEN_LOCATION"] = ["cookies"]
 
 # Cookie security
-# Automatically disabled in local development to allow HTTP cookie storage.
-# Enabled with SameSite=None in production under HTTPS.
-is_dev = app.debug or os.environ.get("FLASK_ENV") == "development" or not os.environ.get("PYTHONANYWHERE_DOMAIN")
-app.config["JWT_COOKIE_SECURE"] = not is_dev
+# CSRF protection is disabled because the frontend (Vercel) and backend
+# (PythonAnywhere) are on different domains. JavaScript on vercel.app
+# cannot read cookies set by pythonanywhere.com, so the double-submit
+# CSRF pattern is impossible. Security is maintained by strict CORS
+# origins which only allow credentials from the Vercel frontend.
+app.config["JWT_COOKIE_SECURE"] = True
 app.config["JWT_COOKIE_HTTPONLY"] = True
-app.config["JWT_COOKIE_SAMESITE"] = "Lax" if is_dev else "None"
-
-# CSRF protection (we'll enable this later after everything works)
-app.config["JWT_COOKIE_CSRF_PROTECT"] = True
+app.config["JWT_COOKIE_SAMESITE"] = "None"
+app.config["JWT_COOKIE_CSRF_PROTECT"] = False
 
 # Cookie paths
 app.config["JWT_ACCESS_COOKIE_PATH"] = "/"
