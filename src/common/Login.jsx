@@ -1,57 +1,37 @@
-import React, { useState } from 'react';
+import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Form, Input, Button, Card, message } from 'antd';
 import { motion } from 'framer-motion';
-import axios from 'axios';
+import { useAuth } from '../context/AuthContext';
 
 const Login = () => {
-  const [loading, setLoading] = useState(false);
+  const { login, isLoading, user } = useAuth();
   const navigate = useNavigate();
 
+  // Already logged in → go straight to panel
+  useEffect(() => {
+    if (user) navigate('/wp-adman', { replace: true });
+  }, [user, navigate]);
+
   const onFinish = async ({ username, password }) => {
-    setLoading(true);
+    const result = await login(username, password);
 
-    try {
-      const res = await axios.post('https://shanvilla.pythonanywhere.com/login', {
-        username,
-        password,
-      });
-
-      if (res.data.status === 'success') {
-        localStorage.setItem('adminToken', 'logged-in');
-        localStorage.setItem('adminUsername', username);
-        // Store user ID if the backend returns it
-        if (res.data.user_id) {
-          localStorage.setItem('adminUserId', String(res.data.user_id));
-        }
-        message.success('Welcome back, Admin!');
-        navigate('/wp-adman');
-      } else {
-        message.error(res.data.message || 'Invalid username or password');
-      }
-    } catch (err) {
-      console.error(err);
-      const serverMsg = err?.response?.data?.message;
-      const httpStatus = err?.response?.status;
-      const networkErr = err?.code === 'ERR_NETWORK';
-
-      if (networkErr) {
+    if (result.ok) {
+      message.success('Welcome back!');
+      navigate('/wp-adman', { replace: true });
+    } else {
+      const code = result.message?.toLowerCase() ?? '';
+      if (code.includes('network') || code.includes('reach')) {
         message.error('Network error — cannot reach the server.');
-      } else if (serverMsg) {
-        message.error(serverMsg);
-      } else if (httpStatus) {
-        message.error(`Server error ${httpStatus}. Try again later.`);
       } else {
-        message.error('Unknown error. Try again later.');
+        message.error(result.message || 'Invalid username or password.');
       }
-    } finally {
-      setLoading(false);
     }
   };
 
   return (
     <div style={styles.loginContainer}>
-      {/* ── Background decoration ── */}
+      {/* Background decoration */}
       <div style={styles.bgOrb1} aria-hidden="true" />
       <div style={styles.bgOrb2} aria-hidden="true" />
 
@@ -73,7 +53,11 @@ const Login = () => {
               name="username"
               rules={[{ required: true, message: 'Please enter your username' }]}
             >
-              <Input placeholder="Enter username" size="large" style={styles.input} />
+              <Input
+                placeholder="Enter username"
+                size="large"
+                style={styles.input}
+              />
             </Form.Item>
 
             <Form.Item
@@ -81,7 +65,12 @@ const Login = () => {
               name="password"
               rules={[{ required: true, message: 'Please enter your password' }]}
             >
-              <Input.Password placeholder="Enter password" size="large" style={styles.input} />
+              <Input.Password
+                className="better-pwd-input"
+                placeholder="Enter password"
+                size="large"
+                style={styles.input}
+              />
             </Form.Item>
 
             <Form.Item style={{ marginTop: 24, marginBottom: 0 }}>
@@ -89,11 +78,11 @@ const Login = () => {
                 type="primary"
                 htmlType="submit"
                 block
-                loading={loading}
+                loading={isLoading}
                 size="large"
                 style={styles.submitBtn}
               >
-                {loading ? 'Authenticating...' : 'Sign In'}
+                {isLoading ? 'Authenticating...' : 'Sign In'}
               </Button>
             </Form.Item>
           </Form>
@@ -140,7 +129,8 @@ const styles = {
     WebkitBackdropFilter: 'blur(20px)',
     border: '1px solid rgba(255, 255, 255, 0.6)',
     borderRadius: 24,
-    boxShadow: '0 30px 70px rgba(15, 25, 45, 0.15), 0 0 0 1px rgba(255, 255, 255, 0.4) inset, 0 4px 16px rgba(15, 25, 45, 0.05)',
+    boxShadow:
+      '0 30px 70px rgba(15, 25, 45, 0.28), 0 0 0 1px rgba(255, 255, 255, 0.4) inset, 0 4px 16px rgba(15, 25, 45, 0.05)',
     padding: '24px 16px',
   },
   cardHeader: {
@@ -170,6 +160,7 @@ const styles = {
     borderRadius: 12,
     border: '1px solid rgba(198, 163, 85, 0.3)',
     background: '#FFFDF9',
+    padding: 12,
   },
   submitBtn: {
     background: 'linear-gradient(135deg, #0F8F46 0%, #1ab55a 100%)',

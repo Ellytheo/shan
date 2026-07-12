@@ -289,7 +289,7 @@ const css = `
     }
 
     .sv-nav__drawer--open {
-      max-height: 420px;
+      max-height: 500px;
       opacity: 1;
       padding: 12px 16px 18px;
       pointer-events: auto;

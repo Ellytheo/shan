@@ -27,9 +27,14 @@ const WhatsAppWidget = () => {
           >
             <div style={styles.tooltipHeader}>
               <span style={styles.tooltipTitle}>Need Assistance?</span>
-              <button onClick={closeTooltip} style={styles.closeBtn} aria-label="Close tooltip">
+              <motion.button 
+                onClick={closeTooltip} 
+                style={styles.closeBtn} 
+                aria-label="Close tooltip"
+                whileHover={{ backgroundColor: "rgba(0,0,0,0.06)", color: "#1a202c" }}
+              >
                 <FaTimes />
-              </button>
+              </motion.button>
             </div>
             <p style={styles.tooltipText}>Chat with us on WhatsApp for instant assistance!</p>
             <div style={styles.tooltipNumber}>0111427894</div>
@@ -106,11 +111,14 @@ const styles = {
     color: "#718096",
     cursor: "pointer",
     fontSize: "1.1rem",
-    padding: "4px",
+    padding: "6px",
+    width: "28px",
+    height: "28px",
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
-    transition: "color 0.2s ease",
+    transition: "all 0.2s ease",
+    borderRadius: "50%",
   },
   tooltipText: {
     margin: 0,

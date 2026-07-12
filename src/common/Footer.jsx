@@ -6,113 +6,183 @@ import { FiSend } from 'react-icons/fi';
 
 const FooterContainer = styled.footer`
   background: #b7d3d1c5;
-  color: #1f2937;
-  padding: 2.2rem 1.5rem 1.75rem;
+  color: #0B1C1A;
+  padding: 4rem 1.5rem 2rem;
+  border-top: 1px solid rgba(0, 0, 0, 0.05);
 `;
 
 const FooterGrid = styled.div`
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-  gap: 1.8rem;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 3rem;
   max-width: 1200px;
-  margin: 0 auto 1.8rem;
+  margin: 0 auto 3rem;
+  text-align: center;
 `;
 
 const FooterTitle = styled.h3`
   font-family: 'Playfair Display', serif;
-  font-size: 24px;
-  margin-bottom: 1.1rem;
-  font-weight: bold;
-  color: #0f172a;
+  font-size: 22px;
+  margin-bottom: 1.5rem;
+  font-weight: 700;
+  color: #0B1C1A;
+  position: relative;
+  display: inline-block;
+  
+  &::after {
+    content: '';
+    position: absolute;
+    left: 50%;
+    transform: translateX(-50%);
+    bottom: -8px;
+    width: 40px;
+    height: 2px;
+    background: #0F8F46;
+  }
 `;
 
 const FooterLink = styled.a`
-  color: #334155;
+  color: #16b616;
   text-decoration: none;
   display: block;
-  margin-bottom: 0.65rem;
-  transition: color 0.3s ease;
+  margin-bottom: 0.8rem;
+  transition: all 0.3s ease;
+  font-size: 15px;
 
   &:hover {
-    color: #F7B75E;
+    color: #e0b908;
+    transform: translateY(-2px);
   }
 `;
 
 const ContactText = styled.p`
   color: #334155;
-  margin-bottom: 1rem;
-  font-size: 14px;
+  margin-bottom: 1.2rem;
+  font-size: 15px;
+  line-height: 1.6;
 `;
 
 const SocialLinks = styled.div`
   display: flex;
-  gap: 0.85rem;
-  font-size: 1.15rem;
-  margin-top: 1rem;
+  justify-content: center;
+  gap: 1rem;
+  font-size: 1.25rem;
+  margin-top: 1.5rem;
 
   a {
-    color: #1f2937;
-    transition: color 0.3s ease;
+    color: #0B1C1A;
+    background: rgba(0, 0, 0, 0.05);
+    width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    transition: all 0.3s ease;
 
     &:hover {
-      color:rgb(221, 189, 8);
+      color: #FFF;
+      transform: translateY(-3px);
     }
+  }
+
+  a.social-fb:hover {
+    background: #1877F2;
+  }
+  
+  a.social-ig:hover {
+    background: radial-gradient(circle at 30% 107%, #fdf497 0%, #fdf497 5%, #fd5949 45%, #d6249f 60%, #285AEB 90%);
+  }
+
+  a.social-tk:hover {
+    background: #000000;
   }
 `;
 
 const NewsletterSection = styled(motion.div)`
-  background: #50a5f5;
-  padding: 1.15rem 1.2rem;
-  border-radius: 10px;
+  background: rgb(224, 218, 218);
+  padding: 2rem;
+  border-radius: 16px;
+  border: 1px solid rgba(0, 0, 0, 0.05);
   text-align: center;
 `;
 
 const NewsletterInputWrapper = styled.form`
   display: flex;
-  background: #FAF5EF;
-  border-radius: 50px;
+  background: #FFF;
+  border-radius: 8px;
   overflow: hidden;
-  margin-top: 1rem;
+  margin-top: 1.5rem;
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  transition: all 0.3s ease;
 
-  @media (max-width: 500px) {
+  &:focus-within {
+    border-color: #0F8F46;
+    box-shadow: 0 0 0 3px rgba(15, 143, 70, 0.15);
+  }
+
+  @media (max-width: 600px) {
     flex-direction: column;
-    border-radius: 8px;
   }
 `;
 
 const NewsletterInput = styled.input`
-  flex: 4;
-  padding: 10px 4px;
+  flex: 1;
+  min-width: 0;
+  padding: 12px 16px;
   border: none;
-  font-size: 14px;
+  background: transparent;
+  color: #0B1C1A;
+  font-size: 13px;
   outline: none;
+
+  &::placeholder {
+    color: #64748B;
+  }
 `;
 
 const NewsletterButton = styled.button`
-  background: #e5eef1;
-  color: #489aec;
-  padding: 10px 10px;
-  border: none;
-  font-weight: bold;
+  background: #0F8F46 !important;
+  color: #FFFFFF !important;
+  padding: 0 0.65rem !important;
+  border: none !important;
+  font-weight: 800 !important;
+  min-height: 48px;
   cursor: pointer;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto !important;
 
-  &:hover {
-    background: #93e0eb;
+  &:hover:not(:disabled) {
+    background: #0a6b33 !important;
+    transform: translateY(-1px);
+  }
+  
+  &:disabled {
+    background: #94A3B8 !important;
+    cursor: not-allowed;
+  }
+
+  @media (max-width: 600px) {
+    width: 100%;
   }
 `;
 
 const StatusMessage = styled.p`
-  color: ${({ error }) => (error ? '#ff6b6b' : '#dee7de')};
+  color: ${({ error }) => (error ? '#ef4444' : '#0F8F46')};
   font-size: 0.9rem;
-  margin-top: 10px;
+  margin-top: 12px;
 `;
 
 const Divider = styled.hr`
   border: none;
   height: 1px;
-  background-color: #1d3b5c;
-  margin: 2rem auto 1.4rem;
+  background: rgba(0, 0, 0, 0.2);
+  margin: 0 auto 2rem;
   max-width: 1200px;
+  width: 100%;
 `;
 
 const BottomRow = styled.div`
@@ -121,7 +191,8 @@ const BottomRow = styled.div`
   display: flex;
   flex-direction: column;
   align-items: center;
-  color: #334155;
+  gap: 1rem;
+  color: #475569;
   font-size: 14px;
 
   @media (min-width: 768px) {
@@ -129,14 +200,20 @@ const BottomRow = styled.div`
     justify-content: space-between;
   }
 
+  div:last-child {
+    display: flex;
+    gap: 1.5rem;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+
   a {
-    color: #334155;
-    margin: 0 0.75rem;
+    color: #475569;
     text-decoration: none;
     transition: color 0.3s;
 
     &:hover {
-      color: #085dfc;
+      color: #0F8F46;
     }
   }
 `;
@@ -164,7 +241,7 @@ const Footer = () => {
       statusTimerRef.current = window.setTimeout(() => {
         setStatus(null);
         setErrorMsg('');
-      }, 120000);
+      }, 5000);
     }
 
     return () => {
@@ -210,16 +287,16 @@ const Footer = () => {
             Experience unparalleled comfort and authentic Kenyan warmth in Maragua, Murang’a County.
           </ContactText>
           <SocialLinks>
-            <a href="https://www.facebook.com/search/top/?q=Shanvilla%20Resort%20KE"><FaFacebookF /></a>
-            <a href="https://www.instagram.com/shanvillaresort/"><FaInstagram /></a>
-            <a href="https://www.tiktok.com/discover/shanvilla-resort-in-maragua"><FaTiktok /></a>
+            <a className="social-fb" href="https://www.facebook.com/search/top/?q=Shanvilla%20Resort%20KE"><FaFacebookF /></a>
+            <a className="social-ig" href="https://www.instagram.com/shanvillaresort/"><FaInstagram /></a>
+            <a className="social-tk" href="https://www.tiktok.com/discover/shanvilla-resort-in-maragua"><FaTiktok /></a>
           </SocialLinks>
         </motion.div>
 
         <motion.div initial="hidden" whileInView="visible" viewport={{ once: true }} custom={2} variants={fadeIn}>
           <FooterTitle>Quick Links</FooterTitle>
           <FooterLink href="/#rooms">Rooms & Suites</FooterLink>
-          <FooterLink href="/#about">about</FooterLink>
+          <FooterLink href="/#about">About</FooterLink>
           <FooterLink href="/#amenities">Amenities</FooterLink>
           <FooterLink href="/#reviews">Booking</FooterLink>
           <FooterLink href="/#contact">Contact Us</FooterLink>
@@ -244,6 +321,10 @@ const Footer = () => {
                 value={email}
                 disabled={status === 'loading'}
                 onChange={(e) => setEmail(e.target.value)}
+                onFocus={() => {
+                  // Ping the server to wake it up from sleep early!
+                  fetch('https://render-abct.onrender.com/subscribe', { method: 'HEAD' }).catch(() => {});
+                }}
               />
               <NewsletterButton type="submit" disabled={status === 'loading'}>
                  {status === 'loading' ? <FaSpinner className="spin" /> : <FiSend size={20} />}

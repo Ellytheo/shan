@@ -12,7 +12,7 @@
   --sidebar-hover-bg: rgba(44, 94, 67, 0.04);
 
   /* Primary Accent (Forest Green / Pine) */
-  --primary-blue: #2C5E43;
+  --primary-blue: #06b924;
   --primary-blue-light: #4D8B6D;
   --primary-blue-bg: rgba(44, 94, 67, 0.06);
 
@@ -145,9 +145,9 @@ html {
   position: relative;
 }
 .conn-dot.ok {
-  background: var(--success);
-  box-shadow: 0 0 6px var(--success);
-  animation: glow-green 2s ease-in-out infinite;
+  background: #02f016;
+  box-shadow: 0 0 10px #02d31e, 0 0 20px rgba(16, 185, 129, 0.6);
+  animation: glow-green 1.8s ease-in-out infinite;
 }
 .conn-dot.error {
   background: var(--danger);
@@ -168,8 +168,12 @@ html {
 }
 
 @keyframes glow-green {
-  0%, 100% { box-shadow: 0 0 4px var(--success); }
-  50% { box-shadow: 0 0 12px var(--success), 0 0 20px rgba(16,185,129,0.3); }
+  0%, 100% {
+    box-shadow: 0 0 6px #10B981, 0 0 12px rgba(16, 185, 129, 0.5);
+  }
+  50% {
+    box-shadow: 0 0 18px #10B981, 0 0 35px rgba(16, 185, 129, 0.9), 0 0 50px rgba(16, 185, 129, 0.4);
+  }
 }
 @keyframes glow-red {
   0%, 100% { box-shadow: 0 0 4px var(--danger); }
@@ -674,17 +678,23 @@ html {
 
 /* Table Header */
 .sv-admin-table .ant-table-thead > tr > th {
-  background: var(--primary-blue) !important;
+  background: olive !important;
   color: #FFFFFF !important;
+  text-shadow: none !important;
+  box-shadow: none !important;
   font-weight: 700 !important;
   font-size: 0.85rem !important;
   text-transform: uppercase;
   letter-spacing: 0.04em;
   border-bottom: none !important;
+  border-right: 1px solid rgba(255, 255, 255, 0.3) !important;
   padding: 14px 16px !important;
   position: sticky;
   top: 0;
   z-index: 10;
+}
+.sv-admin-table .ant-table-thead > tr > th:last-child {
+  border-right: none !important;
 }
 .sv-admin-table .ant-table-thead > tr > th::before {
   display: none !important;
@@ -792,23 +802,23 @@ html {
   transition: all 0.22s cubic-bezier(0.4,0,0.2,1) !important;
 }
 
-/* Primary — Blue gradient */
+/* Primary — Gold gradient */
 .ant-btn-primary {
-  background: linear-gradient(135deg, var(--primary-blue), #1565C0) !important;
+  background: linear-gradient(135deg, #C5A880, #B89B6C) !important;
   border: none !important;
-  box-shadow: 0 4px 15px rgba(25,118,210,0.3) !important;
+  box-shadow: 0 4px 15px rgba(197, 168, 128, 0.3) !important;
   text-shadow: 0 1px 2px rgba(0,0,0,0.1) !important;
   color: #FFF !important;
 }
 .ant-btn-primary:hover,
 .ant-btn-primary:focus {
-  background: linear-gradient(135deg, #1565C0, #0D47A1) !important;
+  background: linear-gradient(135deg, #B89B6C, #A67C00) !important;
   transform: translateY(-2px);
-  box-shadow: 0 8px 24px rgba(25,118,210,0.4) !important;
+  box-shadow: 0 8px 24px rgba(197, 168, 128, 0.4) !important;
 }
 .ant-btn-primary:active {
   transform: translateY(0);
-  box-shadow: 0 3px 10px rgba(25,118,210,0.25) !important;
+  box-shadow: 0 3px 10px rgba(197, 168, 128, 0.25) !important;
 }
 
 /* Default */
@@ -819,68 +829,68 @@ html {
 }
 .ant-btn-default:hover,
 .ant-btn-default:focus {
-  background: var(--primary-blue-bg) !important;
-  border-color: var(--primary-blue-light) !important;
-  color: var(--primary-blue) !important;
+  background: #FAF8F5 !important;
+  border-color: #C5A880 !important;
+  color: #B89B6C !important;
   transform: translateY(-2px);
-  box-shadow: 0 4px 14px rgba(25,118,210,0.12) !important;
+  box-shadow: 0 4px 14px rgba(197, 168, 128, 0.12) !important;
 }
 .ant-btn-default:active {
   transform: translateY(0);
 }
 
-/* Success */
+/* Success — Charcoal */
 .ant-btn-success,
 .ant-btn.btn-success {
-  background: linear-gradient(135deg, var(--success), #059669) !important;
+  background: linear-gradient(135deg, #1C1917, #333333) !important;
   border: none !important;
   color: #FFF !important;
-  box-shadow: 0 4px 15px rgba(16,185,129,0.3) !important;
+  box-shadow: 0 4px 15px rgba(28, 25, 23, 0.3) !important;
 }
 .ant-btn-success:hover,
 .ant-btn.btn-success:hover {
-  background: linear-gradient(135deg, #059669, #047857) !important;
+  background: linear-gradient(135deg, #333333, #4D4D4D) !important;
   transform: translateY(-2px);
-  box-shadow: 0 8px 24px rgba(16,185,129,0.4) !important;
+  box-shadow: 0 8px 24px rgba(28, 25, 23, 0.4) !important;
 }
 .ant-btn-success:active,
 .ant-btn.btn-success:active {
   transform: translateY(0);
 }
 
-/* Warning — Orange */
+/* Warning — Taupe */
 .ant-btn-warning,
 .ant-btn.btn-warning {
-  background: linear-gradient(135deg, var(--primary-orange), #EF6C00) !important;
+  background: linear-gradient(135deg, #8B7355, #6B5840) !important;
   border: none !important;
   color: #FFF !important;
-  box-shadow: 0 4px 15px rgba(251,140,0,0.3) !important;
+  box-shadow: 0 4px 15px rgba(139, 115, 85, 0.3) !important;
 }
 .ant-btn-warning:hover,
 .ant-btn.btn-warning:hover {
-  background: linear-gradient(135deg, #EF6C00, #E65100) !important;
+  background: linear-gradient(135deg, #6B5840, #5C4A35) !important;
   transform: translateY(-2px);
-  box-shadow: 0 8px 24px rgba(251,140,0,0.4) !important;
+  box-shadow: 0 8px 24px rgba(139, 115, 85, 0.4) !important;
 }
 .ant-btn-warning:active,
 .ant-btn.btn-warning:active {
   transform: translateY(0);
 }
 
-/* Danger */
+/* Danger — Deep Brown */
 .ant-btn-dangerous,
 .ant-btn-danger {
-  border-color: #FCA5A5 !important;
-  color: #EF4444 !important;
+  border-color: #8B7355 !important;
+  color: #3E2723 !important;
   background: #FFF !important;
 }
 .ant-btn-dangerous:hover,
 .ant-btn-danger:hover {
-  background: #FEF2F2 !important;
-  border-color: #EF4444 !important;
-  color: #DC2626 !important;
+  background: #F5F1ED !important;
+  border-color: #3E2723 !important;
+  color: #271714 !important;
   transform: translateY(-2px);
-  box-shadow: 0 4px 14px rgba(239,68,68,0.15) !important;
+  box-shadow: 0 4px 14px rgba(62, 39, 35, 0.15) !important;
 }
 .ant-btn-dangerous:active,
 .ant-btn-danger:active {
@@ -956,6 +966,11 @@ html {
   color: #475569;
   transform: translateY(-1px);
 }
+.inq-btn--muted:active,
+.inq-btn--muted:focus-visible {
+  background: rgba(100,116,139,0.07);
+  transform: translateY(0);
+}
 
 .inq-btn--primary {
   background: var(--primary-blue-bg);
@@ -969,6 +984,12 @@ html {
   transform: translateY(-1px);
   box-shadow: 0 4px 12px rgba(25,118,210,0.18);
 }
+.inq-btn--primary:active,
+.inq-btn--primary:focus-visible {
+  background: rgba(25,118,210,0.08);
+  transform: translateY(0);
+  box-shadow: none;
+}
 
 .inq-btn--danger {
   background: rgba(239,68,68,0.06);
@@ -981,6 +1002,14 @@ html {
   color: #DC2626;
   transform: translateY(-1px);
   box-shadow: 0 4px 12px rgba(239,68,68,0.15);
+}
+.inq-btn--danger:active,
+.inq-btn--danger:focus-visible {
+  background: rgba(239,68,68,0.14);
+  border-color: #EF4444;
+  color: #DC2626;
+  transform: translateY(0);
+  box-shadow: none;
 }
 
 .inq-btn--warning {
@@ -1188,16 +1217,16 @@ html {
 .room-action-btn i { font-size: 0.95rem; }
 
 .room-action-btn--primary {
-  background: linear-gradient(135deg, var(--primary-blue), #1565C0);
+  background: linear-gradient(135deg, var(--primary-blue), #059669);
   color: #FFF;
-  box-shadow: 0 4px 12px rgba(25,118,210,0.25);
+  box-shadow: 0 4px 12px rgba(6,185,66,0.25);
 }
 .room-action-btn--primary:hover {
-  background: #EF4444;
+  background: linear-gradient(135deg, #059669, #047857);
   color: #fff;
-  border-color: #EF4444;
+  border-color: transparent;
   transform: translateY(-2px);
-  box-shadow: 0 8px 20px rgba(239,68,68,0.35);
+  box-shadow: 0 8px 20px rgba(6,185,66,0.35);
 }
 .room-action-btn--primary:active { transform: translateY(0); }
 
@@ -1221,30 +1250,49 @@ html {
   border-color: rgba(16,185,129,0.2);
 }
 .room-action-btn--activate:hover {
-  background: #EF4444;
-  border-color: #EF4444;
+  background: #059669;
+  border-color: #059669;
   color: #fff;
   transform: translateY(-1px);
-  box-shadow: 0 4px 14px rgba(239,68,68,0.3);
+  box-shadow: 0 4px 14px rgba(16,185,129,0.3);
 }
 .room-action-btn--activate:active { transform: translateY(0); }
 
-/* Global hover → red rule for Ant Design buttons */
-.ant-btn:not(.ant-btn-primary):not([disabled]):hover,
-.ant-btn:not(.ant-btn-primary):not([disabled]):focus {
+/* Scoped hover → red: applies to main action buttons in headers/cards only.
+   Uses :focus-visible so keyboard nav works but mouse clicks don't get stuck. */
+.view-header .ant-btn:not([disabled]):hover,
+.view-header .ant-btn:not([disabled]):focus-visible,
+.admin-card-style > .ant-card-body > .ant-btn:not([disabled]):hover,
+.admin-card-style > .ant-card-body > .ant-btn:not([disabled]):focus-visible {
   color: #fff !important;
   background: #EF4444 !important;
   border-color: #EF4444 !important;
 }
-.ant-btn-primary:not([disabled]):hover,
-.ant-btn-primary:not([disabled]):focus {
-  background: #EF4444 !important;
-  border-color: #EF4444 !important;
-  color: #fff !important;
+
+/* Reset red state immediately on mouse-leave / blur */
+.view-header .ant-btn:not([disabled]):not(:hover):not(:focus-visible),
+.admin-card-style > .ant-card-body > .ant-btn:not([disabled]):not(:hover):not(:focus-visible) {
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
 }
-.ant-btn-primary:not([disabled]):hover i,
-.ant-btn:not(.ant-btn-primary):not([disabled]):hover i {
-  color: #fff !important;
+
+/* room action custom buttons keep their red hover */
+.room-action-btn:not(.room-action-btn--block):not(.room-action-btn--activate):hover {
+  background: #EF4444;
+  color: #fff;
+  border-color: #EF4444;
+}
+
+/* ═══════════════════════════════════════════════════
+   Audit Logs filter bar
+   ═══════════════════════════════════════════════════ */
+.audit-filter-bar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  padding: 12px 0 16px;
+  border-bottom: 1px solid rgba(44,94,67,0.06);
+  margin-bottom: 16px;
 }
 
 /* ═══════════════════════════════════════════════════
@@ -1397,6 +1445,18 @@ html {
   border-radius: 10px !important;
   border: 1px solid #94A3B8 !important; /* Darker slate-400 border for high visibility */
   transition: var(--transition);
+  padding-left: 12px !important;
+  padding-right: 12px !important;
+}
+.ant-input-affix-wrapper {
+  padding-left: 12px !important;
+  padding-right: 12px !important;
+  border-radius: 10px !important;
+  border: 1px solid #94A3B8 !important;
+}
+.ant-input-affix-wrapper .ant-input {
+  padding-left: 0px !important;
+  padding-right: 0px !important;
 }
 .ant-input:focus,
 .ant-input-focused,
@@ -1433,7 +1493,7 @@ html {
   .admin-sidebar {
     width: 260px;
     transform: translateX(-100%);
-    box-shadow: 10px 0 30px rgba(44, 94, 67, 0.1);
+    box-shadow: 10px 0 30px rgba(44, 94, 67, 0.212);
   }
   .admin-sidebar:not(.collapsed) {
     transform: translateX(0);
@@ -1475,6 +1535,12 @@ html {
   .admin-main-content:not(.sidebar-collapsed) .view-header {
     padding-right: 20px;
   }
+  
+  /* Make tables scrollable on tablets where they're still shown */
+  .sv-admin-table {
+    overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch;
+  }
 }
 
 /* ═══════════════════════════════════════════════════
@@ -1491,6 +1557,7 @@ html {
   }
   .view-header-right {
     width: 100%;
+    justify-content: flex-start;  /* buttons stay left, never centred */
   }
   .view-title { font-size: 1.5rem; }
 }

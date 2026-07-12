@@ -1,16 +1,28 @@
 import { useCallback, useEffect, useState } from 'react';
-import axios from 'axios';
+import api from '../api/axios';
 import {
   Table, Button, message, Badge, Card, Popconfirm,
   Dropdown, Input, Select, DatePicker, Drawer,
   Timeline, Form, Modal, Tag, Spin, Upload, Progress,
 } from 'antd';
-import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
 import { motion, AnimatePresence } from 'framer-motion';
 import dayjs from 'dayjs';
 import isBetween from 'dayjs/plugin/isBetween';
 import BookingModal from '../components/Booking';
 import './AdminPage.css';
+import { BookingCard, UserCard, AuditLogCard, InquiryCard } from './MobileCards';
+
+/* ── responsive breakpoint hook ── */
+function useWindowWidth() {
+  const [w, setW] = useState(() => window.innerWidth);
+  useEffect(() => {
+    const handler = () => setW(window.innerWidth);
+    window.addEventListener('resize', handler);
+    return () => window.removeEventListener('resize', handler);
+  }, []);
+  return w;
+}
 
 import pic5 from '../images/pic5.jpg';
 import pic15 from '../images/pic15.jpg';
@@ -26,7 +38,8 @@ const IMAGE_MAP = {
 
 dayjs.extend(isBetween);
 
-const API_BASE = 'https://shanvilla.pythonanywhere.com';
+// API_BASE kept only for image URL resolution (not for api.get/post calls which already use baseURL)
+const API_BASE = (api.defaults.baseURL || '').replace(/\/$/, '');
 
 const COMMON_AMENITIES = [
   { value: 'bi-thermometer-snow|Air Conditioning', label: 'Air Conditioning' },
@@ -55,7 +68,6 @@ const STATUS_MAP = {
 };
 
 const fmt = (s) => STATUS_MAP[s?.toLowerCase()]?.label ?? 'Pending';
-const badgeFor = (s) => STATUS_MAP[s?.toLowerCase()]?.badge ?? 'warning';
 
 const STATUS_ACTIONS = {
   pending:    [{ key:'confirmed', label:'Confirm Booking' }, { key:'cancelled', label:'Cancel', danger:true }],
@@ -69,7 +81,7 @@ const AdminPage = () => {
   const [contacts, setContacts]   = useState([]);
   const [bookings, setBookings]   = useState([]);
   const [stats, setStats]         = useState({});
-  const [loading, setLoading]     = useState(false);
+  const [loading, setLoading]     = useState(true);
   const [actLoading, setActLoading] = useState(null);
   const [connStatus, setConnStatus] = useState('checking'); // 'ok' | 'error' | 'checking'
 
@@ -125,6 +137,16 @@ const AdminPage = () => {
   /* settings */
   const [settingsForm] = Form.useForm();
 
+  /* audit logs */
+  const [auditLogs, setAuditLogs]         = useState([]);
+  const [auditTotal, setAuditTotal]       = useState(0);
+  const [auditPage, setAuditPage]         = useState(1);
+  const [auditSearch, setAuditSearch]     = useState('');
+  const [auditTempSearch, setAuditTempSearch] = useState('');
+  const [auditAction, setAuditAction]     = useState('');
+  const [auditActions, setAuditActions]   = useState([]);
+  const [auditLoading, setAuditLoading]   = useState(false);
+
   /* upload & gallery state */
   const [uploadingImage, setUploadingImage] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
@@ -132,8 +154,13 @@ const AdminPage = () => {
   const [galleryList, setGalleryList] = useState([]);
   const [uploadingGallery, setUploadingGallery] = useState(false);
 
-  const navigate = useNavigate();
-  const adminName = localStorage.getItem('adminUsername') || 'admin';
+  const { user, logout: authLogout } = useAuth();
+  const adminName = user?.username || 'admin';
+  const isAdmin = user?.role === 'Admin';
+
+  /* ── responsive: show cards on ≤768px ── */
+  const windowWidth = useWindowWidth();
+  const isMobile = windowWidth <= 768;
 
   /* ── auto-collapse on small screens ── */
   useEffect(() => {
@@ -149,24 +176,30 @@ const AdminPage = () => {
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
-  /* ── sync active view to localstorage ── */
+  /* ── sync active view to localstorage & guard restricted views ── */
   useEffect(() => {
+    const adminOnlyViews = ['reports', 'users', 'audit-logs', 'settings'];
+    if (!isAdmin && adminOnlyViews.includes(view)) {
+      setTimeout(() => setView('dashboard'), 0);
+      return;
+    }
     localStorage.setItem('adminActiveView', view);
-  }, [view]);
+  }, [view, isAdmin]);
 
   /* ── fetch ── */
-  const fetchData = useCallback(async () => {
-    setLoading(true);
+  const fetchData = useCallback(async (isInitial = false) => {
+    if (isInitial !== true) setLoading(true);
     try {
-      const [cRes, bRes, dRes, rRes, dbRoomsRes, galRes, setRes, usersRes] = await Promise.all([
-        axios.get(`${API_BASE}/get_contacts`),
-        axios.get(`${API_BASE}/bookings?limit=200`),
-        axios.get(`${API_BASE}/dashboard`),
-        axios.get(`${API_BASE}/availability?checkin=${dayjs().format('YYYY-MM-DD')}&checkout=${dayjs().add(1, 'day').format('YYYY-MM-DD')}`),
-        axios.get(`${API_BASE}/api/rooms`),
-        axios.get(`${API_BASE}/api/gallery`),
-        axios.get(`${API_BASE}/api/settings`).catch(() => null), // Catch in case endpoint isn't ready
-        axios.get(`${API_BASE}/api/users`).catch(() => null),    // Fetch users list from backend
+      const [cRes, bRes, dRes, rRes, dbRoomsRes, galRes, setRes, usersRes] =
+      await Promise.all([
+        api.get('/get_contacts'),
+        api.get('/bookings?limit=200'),
+        api.get('/dashboard'),
+        api.get(`/availability?checkin=${dayjs().format('YYYY-MM-DD')}&checkout=${dayjs().add(1, 'day').format('YYYY-MM-DD')}`),
+        api.get('/api/rooms'),
+        api.get('/api/gallery'),
+        api.get('/api/settings').catch(() => null), // Catch in case endpoint isn't ready
+        api.get('/api/users').catch(() => null),    // Fetch users list from backend
       ]);
 
       if (cRes.data.status === 'success') setContacts(cRes.data.data || []);
@@ -213,21 +246,62 @@ const AdminPage = () => {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [settingsForm]);
+
+  // ProtectedRoute already guards this page; just fetch data on mount
+  useEffect(() => {
+    setTimeout(() => fetchData(true), 0);
+  }, [fetchData]);
+
+  const fetchAuditLogs = useCallback(async () => {
+    setAuditLoading(true);
+    try {
+      const params = {
+        page: auditPage,
+        limit: 20,
+        ...(auditSearch && { search: auditSearch }),
+        ...(auditAction && { action: auditAction }),
+      };
+
+      const logsRes = await api.get('/api/audit-logs', { params });
+
+      if (logsRes.data.status === 'success') {
+        const logs = logsRes.data.logs || [];
+        setAuditLogs(logs);
+        setAuditTotal(logsRes.data.total || 0);
+        setAuditActions(Array.from(new Set(logs.map((log) => log.action).filter(Boolean))));
+      } else {
+        setAuditLogs([]);
+        setAuditTotal(0);
+        setAuditActions([]);
+      }
+    } catch (error) {
+      console.error('Audit logs request failed:', error);
+      setAuditLogs([]);
+      setAuditTotal(0);
+      setAuditActions([]);
+      message.error('Failed to load audit logs.');
+    } finally {
+      setAuditLoading(false);
+    }
+  }, [auditPage, auditSearch, auditAction]);
 
   useEffect(() => {
-    if (!localStorage.getItem('adminToken')) { navigate('/sponge'); return; }
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    fetchData();
-  }, [fetchData, navigate]);
+    if (view !== 'audit-logs') return;
+
+    const timeoutId = window.setTimeout(() => {
+      void fetchAuditLogs();
+    }, 0);
+
+    return () => window.clearTimeout(timeoutId);
+  }, [view, fetchAuditLogs]);
 
   /* ── actions ── */
   const changeStatus = async (id, newStatus) => {
     setActLoading(id);
     try {
-      const res = await axios.put(`${API_BASE}/booking/${id}/status`, {
+      const res = await api.put(`/booking/${id}/status`, {
         status: newStatus,
-        changed_by: adminName,
       });
       if (res.data.status === 'success') {
         message.success('Status updated.');
@@ -243,7 +317,7 @@ const AdminPage = () => {
 
   const deleteContact = async (id) => {
     try {
-      const res = await axios.delete(`${API_BASE}/delete_contact/${id}`);
+      const res = await api.delete(`/delete_contact/${id}`);
       if (res.data.status === 'success') { message.success('Inquiry removed.'); fetchData(); }
       else message.error(res.data.message || 'Delete failed.');
     } catch { message.error('Error deleting inquiry.'); }
@@ -251,7 +325,7 @@ const AdminPage = () => {
 
   const loadHistory = async (bookingId) => {
     try {
-      const res = await axios.get(`${API_BASE}/booking/${bookingId}/history`);
+      const res = await api.get(`/booking/${bookingId}/history`);
       if (res.data.status === 'success') setHistory(res.data.history || []);
     } catch { setHistory([]); }
   };
@@ -281,7 +355,7 @@ const AdminPage = () => {
         checkout_date: vals.dates[1].format('YYYY-MM-DD'),
         guests: vals.guests, admin_notes: vals.admin_notes,
       };
-      const res = await axios.put(`${API_BASE}/booking/${selected.id}`, payload);
+      const res = await api.put(`/booking/${selected.id}`, payload);
       if (res.data.status === 'success') {
         message.success('Booking updated.'); setEditOpen(false); fetchData();
         const roomName = rooms.find(r => r.id === vals.room_type_id)?.name;
@@ -326,7 +400,7 @@ const AdminPage = () => {
           fullBoard: Number(vals.price_fb),
         }
       };
-      const res = await axios.put(`${API_BASE}/api/rooms/${editRoom.id}`, payload);
+      const res = await api.put(`/api/rooms/${editRoom.id}`, payload);
       if (res.data.status === 'success') {
         message.success('Room updated.');
         setEditRoom(null);
@@ -358,7 +432,7 @@ const AdminPage = () => {
     setUploadingImage(true);
     setUploadProgress(0);
     try {
-      const res = await axios.post(`${API_BASE}/api/upload`, formData, {
+      const res = await api.post('/api/upload', formData, {
         headers: { 'Content-Type': 'multipart/form-data' },
         onUploadProgress: (progressEvent) => {
           const pct = Math.round((progressEvent.loaded * 100) / progressEvent.total);
@@ -403,12 +477,12 @@ const AdminPage = () => {
     formData.append('file', file);
     setUploadingGallery(true);
     try {
-      const uploadRes = await axios.post(`${API_BASE}/api/upload`, formData, {
+      const uploadRes = await api.post('/api/upload', formData, {
         headers: { 'Content-Type': 'multipart/form-data' }
       });
       if (uploadRes.data.status === 'success') {
         const imageUrl = uploadRes.data.url;
-        const galRes = await axios.post(`${API_BASE}/api/gallery`, { image_url: imageUrl });
+        const galRes = await api.post('/api/gallery', { image_url: imageUrl });
         if (galRes.data.status === 'success') {
           message.success('Image added to gallery!');
           fetchData();
@@ -432,14 +506,15 @@ const AdminPage = () => {
 
   const handleDeleteGallery = async (id) => {
     try {
-      const res = await axios.delete(`${API_BASE}/api/gallery/${id}`);
+      const res = await api.delete(`/api/gallery/${id}`);
       if (res.data.status === 'success') {
         message.success('Image deleted from gallery.');
         fetchData();
       } else {
         message.error(res.data.message || 'Failed to delete image.');
       }
-    } catch (err) {
+    } catch (error) {
+      console.error(error);
       message.error('Error deleting image.');
     }
   };
@@ -448,29 +523,42 @@ const AdminPage = () => {
     if (!selected) return;
     const newNote = selected.admin_notes ? `${selected.admin_notes}, ${note}` : note;
     try {
-      const res = await axios.put(`${API_BASE}/booking/${selected.id}`, { ...selected, admin_notes: newNote });
+      const res = await api.put(`/booking/${selected.id}`, { ...selected, admin_notes: newNote });
       if (res.data.status === 'success') { setSelected(p => ({ ...p, admin_notes: newNote })); message.success('Note saved.'); fetchData(); }
     } catch { message.error('Failed to save note.'); }
   };
 
   const createUser = async (vals) => {
     try {
-      const res = await axios.post(`${API_BASE}/signup`, { 
+      const res = await api.post('/signup', { 
         username: vals.username, 
         password: vals.password,
         role: vals.role
       });
+      // Backend returns 201 on success
       if (res.data.status === 'success') {
-        message.success('User created.');
-        setUserOpen(false); userForm.resetFields();
+        message.success('User created successfully.');
+        setUserOpen(false);
+        userForm.resetFields();
         fetchData();
-      } else message.error(res.data.message || 'Failed to create user.');
-    } catch (err) { message.error(err.response?.data?.message || 'Error creating user.'); }
+      } else {
+        message.error(res.data.message || 'Failed to create user.');
+      }
+    } catch (err) {
+      const msg = err.response?.data?.message || err.message || 'Error creating user.';
+      message.error(msg);
+    }
   };
 
-  const logout = () => {
-    localStorage.removeItem('adminToken'); localStorage.removeItem('adminUsername');
-    navigate('/');
+  const logout = async () => {
+    const key = 'logout_msg';
+    message.loading({ content: 'Signing you out…', key, duration: 0 });
+    try {
+      await authLogout();
+      message.success({ content: 'Logged out successfully. See you next time!', key, duration: 2.5 });
+    } catch {
+      message.error({ content: 'Logout failed. Please try again.', key, duration: 3 });
+    }
   };
 
   /* ── derived counts ── */
@@ -506,6 +594,7 @@ const AdminPage = () => {
       case 'inquiries': return 'Guest Inquiries';
       case 'reports': return 'Reports';
       case 'users': return 'Users';
+      case 'audit-logs': return 'Audit Logs';
       case 'settings': return 'Settings';
       default: return 'Admin Console';
     }
@@ -529,6 +618,8 @@ const AdminPage = () => {
         return 'Operational summaries and performance indicators.';
       case 'users':
         return 'Manage staff accounts and access permissions.';
+      case 'audit-logs':
+        return 'Full record of all admin actions and system events.';
       case 'settings':
         return 'Resort configuration and operating parameters.';
       default:
@@ -558,9 +649,15 @@ const AdminPage = () => {
           </div>
         );
       case 'users':
-        return (
+        return isAdmin ? (
           <Button type="primary" onClick={() => setUserOpen(true)} className="btn-blue">
             <i className="bi bi-person-plus" style={{ marginRight: 6 }} /> Add User
+          </Button>
+        ) : null;
+      case 'audit-logs':
+        return (
+          <Button onClick={fetchAuditLogs} loading={auditLoading} icon={<i className="bi bi-arrow-clockwise" />}>
+            Refresh
           </Button>
         );
       default:
@@ -568,10 +665,20 @@ const AdminPage = () => {
     }
   };
 
+  const colorForBooking = s => {
+    const sl = s?.toLowerCase();
+    if (sl==='pending') return '#D4AF37';
+    if (sl==='confirmed') return '#8B7355';
+    if (sl==='checked_in') return '#1C1917';
+    if (sl==='checked_out') return '#A8A29E';
+    if (sl==='cancelled' || sl==='no_show') return '#3E2723';
+    return '#78716C';
+  };
+
   /* ── booking columns ── */
   const bookingCols = [
     { title:'Ref', dataIndex:'booking_reference', key:'ref',
-      render: t => <span style={{fontWeight:700,color:'var(--primary-blue)',fontSize:'0.82rem'}}>{t}</span>, width:110 },
+      render: t => <span style={{fontWeight:700,color:'#C5A880',fontSize:'0.82rem'}}>{t}</span>, width:110 },
     { title:'Guest', dataIndex:'guest_name', key:'guest',
       render: (t,r) => <span onClick={() => openDetail(r)} style={{fontWeight:600,color:'var(--text-main)',cursor:'pointer'}}>{t}</span> },
     { title:'Room', dataIndex:'room_name', key:'room' },
@@ -582,9 +689,9 @@ const AdminPage = () => {
       render: d => d?.split('T')[0] },
     { title:'Guests', dataIndex:'guests', key:'guests', width:70 },
     { title:'Status', dataIndex:'status', key:'status', width:120,
-      render: s => <Badge status={badgeFor(s)} text={fmt(s)} /> },
+      render: s => <Badge color={colorForBooking(s)} text={fmt(s)} /> },
     { title:'Source', dataIndex:'created_by', key:'src', width:105,
-      render: v => <Tag color={!v||v==='website'?'blue':'green'}>{!v||v==='website'?'🌐 Website':`👤 ${v}`}</Tag> },
+      render: v => <Tag color={!v||v==='website'?'#C5A880':'#8B7355'}>{!v||v==='website'?'🌐 Website':`👤 ${v}`}</Tag> },
     { title:'Actions', key:'act', width:100,
       render: (_,r) => {
         const acts = STATUS_ACTIONS[r.status?.toLowerCase()] || [];
@@ -616,7 +723,7 @@ const AdminPage = () => {
     { title:'Phone', dataIndex:'phone', key:'phone', responsive:['md'] },
     { title:'Message', dataIndex:'message', key:'msg', ellipsis:true },
     { title:'Status', key:'s', width:100,
-      render:(_,r) => <Tag color={repliedSet.has(r.id)?'success':'warning'}>{repliedSet.has(r.id)?'Replied':'Pending'}</Tag> },
+      render:(_,r) => <Tag color={repliedSet.has(r.id)?'#1C1917':'#D4AF37'}>{repliedSet.has(r.id)?'Replied':'Pending'}</Tag> },
     { title:'Actions', key:'act', width:220, fixed:'right',
       render:(_,r) => (
         <div className="inq-actions">
@@ -636,17 +743,19 @@ const AdminPage = () => {
     },
   ];
 
-  /* ── sidebar nav items ── */
-  const navItems = [
-    { id:'dashboard', icon:'bi-speedometer2', label:'Dashboard' },
-    { id:'bookings',  icon:'bi-calendar-range', label:'Bookings' },
-    { id:'rooms',     icon:'bi-house-door',     label:'Rooms' },
-    { id:'gallery',   icon:'bi-images',         label:'Gallery' },
-    { id:'inquiries', icon:'bi-envelope',        label:'Inquiries' },
-    { id:'reports',   icon:'bi-graph-up-arrow',  label:'Reports' },
-    { id:'users',     icon:'bi-people',           label:'Users' },
-    { id:'settings',  icon:'bi-gear',             label:'Settings' },
+  /* ── sidebar nav items (admin-only items hidden for non-Admin roles) ── */
+  const ALL_NAV_ITEMS = [
+    { id:'dashboard',  icon:'bi-speedometer2',    label:'Dashboard',  adminOnly: false },
+    { id:'bookings',   icon:'bi-calendar-range',  label:'Bookings',   adminOnly: false },
+    { id:'rooms',      icon:'bi-house-door',      label:'Rooms',      adminOnly: false },
+    { id:'gallery',    icon:'bi-images',          label:'Gallery',    adminOnly: false },
+    { id:'inquiries',  icon:'bi-envelope',        label:'Inquiries',  adminOnly: false },
+    { id:'reports',    icon:'bi-graph-up-arrow',  label:'Reports',    adminOnly: true  },
+    { id:'users',      icon:'bi-people',          label:'Users',      adminOnly: true  },
+    { id:'audit-logs', icon:'bi-clock-history',   label:'Audit Logs', adminOnly: true  },
+    { id:'settings',   icon:'bi-gear',            label:'Settings',   adminOnly: true  },
   ];
+  const navItems = ALL_NAV_ITEMS.filter(n => !n.adminOnly || isAdmin);
 
   /* ─────────── RENDER ─────────── */
   return (
@@ -793,11 +902,15 @@ const AdminPage = () => {
           {/* ── BOOKINGS ── */}
           {view === 'bookings' && (
             <motion.div key="bk" className="view-wrap" initial={{opacity:0,y:12}} animate={{opacity:1,y:0}} exit={{opacity:0}} transition={{duration:0.3}}>
-              <Card className="admin-card-style">
+              {/* Filters — always visible */}
+              <Card className="admin-card-style" style={{ marginBottom: 16 }}>
                 <div className="filter-row">
                   <div className="filter-group">
-                    <Input.Search placeholder="Name, phone, email, ref..." value={search}
-                      onChange={e=>setSearch(e.target.value)} style={{width:220}} />
+                    <div style={{ display: 'flex', gap: 8 }}>
+                      <Input className="custom-search-input" placeholder="Name, phone, email, ref..." value={search}
+                        onChange={e=>setSearch(e.target.value)} style={{width:220}} />
+                      <Button type="primary" className="btn-blue" icon={<i className="bi bi-search" />} />
+                    </div>
                     <Select value={statusF} onChange={setStatusF} style={{width:135}}>
                       <Select.Option value="all">All Statuses</Select.Option>
                       {Object.entries(STATUS_MAP).map(([k,v])=>(
@@ -817,20 +930,48 @@ const AdminPage = () => {
                   </div>
                   <Button onClick={fetchData} loading={loading} icon={<i className="bi bi-arrow-clockwise"/>}>Refresh</Button>
                 </div>
-
-                <Table columns={bookingCols} dataSource={filtered} rowKey="id"
-                  loading={loading} pagination={{pageSize:10,showSizeChanger:false}}
-                  className="sv-admin-table" size="middle"
-                  scroll={{ x: 1000 }}
-                  rowClassName={r => {
-                    const s = r.status?.toLowerCase();
-                    if (s==='pending') return 'pending-row';
-                    if (s==='checked_in') return 'checkedin-row';
-                    if (s==='cancelled') return 'cancelled-row';
-                    return '';
-                  }}
-                />
               </Card>
+
+              {/* Desktop table */}
+              {!isMobile && (
+                <Card className="admin-card-style sv-table-only">
+                  <Table columns={bookingCols} dataSource={filtered} rowKey="id"
+                    loading={loading} pagination={{pageSize:10,showSizeChanger:false}}
+                    className="sv-admin-table" size="middle"
+                    rowClassName={r => {
+                      const s = r.status?.toLowerCase();
+                      if (s==='pending') return 'pending-row';
+                      if (s==='checked_in') return 'checkedin-row';
+                      if (s==='cancelled') return 'cancelled-row';
+                      return '';
+                    }}
+                  />
+                </Card>
+              )}
+
+              {/* Mobile cards */}
+              {isMobile && (
+                <div className="mc-card-list mc-mobile-only">
+                  {loading && <div className="center-spin"><Spin /></div>}
+                  {!loading && filtered.length === 0 && (
+                    <div className="mc-empty">
+                      <i className="bi bi-calendar-x" />
+                      <div className="mc-empty-text">No bookings match your filters.</div>
+                    </div>
+                  )}
+                  {!loading && filtered.map(b => (
+                    <BookingCard
+                      key={b.id}
+                      booking={b}
+                      onView={openDetail}
+                      onEdit={openEdit}
+                      onStatusChange={changeStatus}
+                      actLoading={actLoading}
+                      statusActions={STATUS_ACTIONS}
+                    />
+                  ))}
+                </div>
+              )}
             </motion.div>
           )}
 
@@ -935,25 +1076,62 @@ const AdminPage = () => {
           {/* ── INQUIRIES ── */}
           {view === 'inquiries' && (
             <motion.div key="inq" className="view-wrap" initial={{opacity:0,y:12}} animate={{opacity:1,y:0}} exit={{opacity:0}} transition={{duration:0.3}}>
-              <Card className="admin-card-style">
-                <div style={{marginBottom:14}}>
-                  <Input.Search placeholder="Search inquiries..." value={inqSearch} onChange={e=>setInqSearch(e.target.value)} style={{maxWidth:280}}/>
+              <Card className="admin-card-style" style={{ marginBottom: 16 }}>
+                <div style={{marginBottom:14, display: 'flex', gap: 8}}>
+                  <Input className="custom-search-input" placeholder="Search inquiries..." value={inqSearch}
+                    onChange={e=>setInqSearch(e.target.value)}
+                    style={{maxWidth:280}}
+                  />
+                  <Button type="primary" className="btn-blue" icon={<i className="bi bi-search" />} />
                 </div>
-                <Table
-                  columns={inqCols}
-                  dataSource={contacts.filter(c=>{
+
+                {/* Desktop table */}
+                {!isMobile && (
+                  <Table
+                    columns={inqCols}
+                    dataSource={contacts.filter(c=>{
+                      const q=inqSearch.toLowerCase();
+                      return !q||[c.first_name,c.last_name,c.email,c.phone,c.message].some(f=>f?.toLowerCase().includes(q));
+                    })}
+                    rowKey="id" loading={loading} pagination={{pageSize:10}} className="sv-admin-table sv-table-only" size="middle"
+                  />
+                )}
+              </Card>
+
+              {/* Mobile cards */}
+              {isMobile && (
+                <div className="mc-card-list mc-mobile-only">
+                  {loading && <div className="center-spin"><Spin /></div>}
+                  {!loading && contacts.filter(c=>{
                     const q=inqSearch.toLowerCase();
                     return !q||[c.first_name,c.last_name,c.email,c.phone,c.message].some(f=>f?.toLowerCase().includes(q));
-                  })}
-                  rowKey="id" loading={loading} pagination={{pageSize:10}} className="sv-admin-table" size="middle"
-                  scroll={{ x: 900 }}
-                />
-              </Card>
+                  }).length === 0 && (
+                    <div className="mc-empty">
+                      <i className="bi bi-envelope" />
+                      <div className="mc-empty-text">No inquiries found.</div>
+                    </div>
+                  )}
+                  {!loading && contacts.filter(c=>{
+                    const q=inqSearch.toLowerCase();
+                    return !q||[c.first_name,c.last_name,c.email,c.phone,c.message].some(f=>f?.toLowerCase().includes(q));
+                  }).map(c => (
+                    <InquiryCard
+                      key={c.id}
+                      contact={c}
+                      isRead={readSet.has(c.id)}
+                      isReplied={repliedSet.has(c.id)}
+                      onRead={id => setReadSet(p => new Set([...p, id]))}
+                      onReply={ct => { setReplyTarget(ct); setReplyOpen(true); }}
+                      onDelete={deleteContact}
+                    />
+                  ))}
+                </div>
+              )}
             </motion.div>
           )}
 
           {/* ── REPORTS ── */}
-          {view === 'reports' && (
+          {isAdmin && view === 'reports' && (
             <motion.div key="rep" className="view-wrap" initial={{opacity:0,y:12}} animate={{opacity:1,y:0}} exit={{opacity:0}} transition={{duration:0.3}}>
               <div className="report-section">
                 <Card title="Today's Operations" className="admin-card-style">
@@ -1046,92 +1224,134 @@ const AdminPage = () => {
           )}
 
           {/* ── USERS ── */}
-          {view === 'users' && (
+          {isAdmin && view === 'users' && (
             <motion.div key="usr" className="view-wrap" initial={{opacity:0,y:12}} animate={{opacity:1,y:0}} exit={{opacity:0}} transition={{duration:0.3}}>
-              <Card className="admin-card-style">
-                <Table dataSource={users} rowKey="id" pagination={false} size="middle"
-                  className="sv-admin-table"
-                  columns={[
-                    { title:'ID',       dataIndex:'id',       key:'id', width:60 },
-                    { title:'Username', dataIndex:'username', key:'u' },
-                    { title:'Role',     dataIndex:'role',     key:'r' },
-                    { title:'Status',   dataIndex:'status',   key:'s',
-                      render: s => {
-                        const isActive = s?.toLowerCase() === 'active';
-                        return <Tag color={isActive ? 'success' : 'error'}>{s}</Tag>;
-                      }
-                    },
-                    { title:'Last Login', dataIndex:'last_login', key:'ll',
-                      render: v => v ? dayjs(v).format('DD MMM YYYY HH:mm') : '—'
-                    },
-                    { title:'Actions',  key:'act', render:(_,r)=>(
-                      <div style={{display:'flex',gap:6,flexWrap:'wrap'}}>
-                        {/* Edit */}
-                        <Button size="small" onClick={() => {
-                          setEditUserTarget(r);
-                          editUserForm.setFieldsValue({ username: r.username, role: r.role });
-                          setEditUserOpen(true);
-                        }}><i className="bi bi-pencil" /></Button>
+              {/* Desktop table */}
+              {!isMobile && (
+                <Card className="admin-card-style sv-table-only">
+                  <Table dataSource={users} rowKey="id" pagination={false} size="middle"
+                    className="sv-admin-table"
+                    columns={[
+                      { title:'ID',       dataIndex:'id',       key:'id', width:60 },
+                      { title:'Username', dataIndex:'username', key:'u' },
+                      { title:'Role',     dataIndex:'role',     key:'r' },
+                      { title:'Status',   dataIndex:'status',   key:'s',
+                        render: s => {
+                          const isActive = s?.toLowerCase() === 'active';
+                          return <Tag color={isActive ? '#1C1917' : '#A8A29E'}>{s}</Tag>;
+                        }
+                      },
+                      { title:'Last Login', dataIndex:'last_login', key:'ll',
+                        render: v => v ? dayjs(v).format('DD MMM YYYY HH:mm') : '—'
+                      },
+                      { title:'Actions',  key:'act', render:(_,r)=>(
+                        <div style={{display:'flex',gap:6,flexWrap:'wrap'}}>
+                          <Button size="small" className="user-action-btn" onClick={() => {
+                            setEditUserTarget(r);
+                            editUserForm.setFieldsValue({ username: r.username, role: r.role });
+                            setEditUserOpen(true);
+                          }}><i className="bi bi-pencil" /></Button>
+                          <Button size="small" className="user-action-btn" onClick={() => {
+                            setResetPwdTarget(r);
+                            resetPwdForm.resetFields();
+                            setResetPwdOpen(true);
+                          }}><i className="bi bi-key" /></Button>
+                          <Button
+                            size="small"
+                            className="user-action-btn"
+                            danger={r.status?.toLowerCase() === 'active'}
+                            onClick={() => {
+                              setLoading(true);
+                              const nextStatus = r.status?.toLowerCase() === 'active' ? 'Disabled' : 'Active';
+                              api.put(`/api/users/${r.id}/status`, { status: nextStatus })
+                                .then(res => {
+                                  if (res.data.status === 'success') { message.success('Status updated.'); fetchData(); }
+                                  else message.error(res.data.message || 'Failed.');
+                                })
+                                .catch(err => message.error(err.response?.data?.message || 'Error.'))
+                                .finally(() => setLoading(false));
+                            }}
+                          >{r.status?.toLowerCase() === 'active' ? 'Disable' : 'Enable'}</Button>
+                          <Popconfirm
+                            title="Delete this user?"
+                            description="This action cannot be undone."
+                            okText="Yes, Delete" cancelText="Cancel"
+                            okButtonProps={{ danger: true }}
+                            onConfirm={() => {
+                              setLoading(true);
+                              api.delete(`/api/users/${r.id}`)
+                                .then(res => {
+                                  if (res.data.status === 'success') { message.success('User deleted.'); fetchData(); }
+                                  else message.error(res.data.message || 'Failed to delete.');
+                                })
+                                .catch(err => message.error(err.response?.data?.message || 'Error deleting.'))
+                                .finally(() => setLoading(false));
+                            }}
+                          >
+                            <Button size="small" danger className="user-action-btn"><i className="bi bi-trash" /></Button>
+                          </Popconfirm>
+                        </div>
+                      )}
+                    ]}
+                  />
+                </Card>
+              )}
 
-                        {/* Reset Password */}
-                        <Button size="small" onClick={() => {
-                          setResetPwdTarget(r);
-                          resetPwdForm.resetFields();
-                          setResetPwdOpen(true);
-                        }}><i className="bi bi-key" /></Button>
-
-                        {/* Enable / Disable */}
-                        <Button
-                          size="small"
-                          danger={r.status?.toLowerCase() === 'active'}
-                          onClick={() => {
-                            setLoading(true);
-                            const nextStatus = r.status?.toLowerCase() === 'active' ? 'Disabled' : 'Active';
-                            axios.put(`${API_BASE}/api/users/${r.id}/status`, { status: nextStatus })
-                              .then(res => {
-                                if (res.data.status === 'success') { message.success('Status updated.'); fetchData(); }
-                                else message.error(res.data.message || 'Failed.');
-                              })
-                              .catch(err => message.error(err.response?.data?.message || 'Error.'))
-                              .finally(() => setLoading(false));
-                          }}
-                        >{r.status?.toLowerCase() === 'active' ? 'Disable' : 'Enable'}</Button>
-
-                        {/* Delete */}
-                        <Popconfirm
-                          title="Delete this user?"
-                          description="This action cannot be undone."
-                          okText="Yes, Delete" cancelText="Cancel"
-                          okButtonProps={{ danger: true }}
-                          onConfirm={() => {
-                            // Prefer stored ID; fall back to matching username in the loaded users list
-                            const storedId = localStorage.getItem('adminUserId');
-                            const storedUsername = localStorage.getItem('adminUsername');
-                            const currentId = storedId
-                              ? storedId
-                              : (users.find(u => u.username === storedUsername)?.id ?? null);
-                            setLoading(true);
-                            axios.delete(`${API_BASE}/api/users/${r.id}`, { data: { current_user_id: currentId } })
-                              .then(res => {
-                                if (res.data.status === 'success') { message.success('User deleted.'); fetchData(); }
-                                else message.error(res.data.message || 'Failed to delete.');
-                              })
-                              .catch(err => message.error(err.response?.data?.message || 'Error deleting.'))
-                              .finally(() => setLoading(false));
-                          }}
-                        >
-                          <Button size="small" danger><i className="bi bi-trash" /></Button>
-                        </Popconfirm>
-                      </div>
-                    )}
-                  ]}
-                />
-              </Card>
+              {/* Mobile cards */}
+              {isMobile && (
+                <div className="mc-card-list mc-mobile-only">
+                  {loading && <div className="center-spin"><Spin /></div>}
+                  {!loading && users.length === 0 && (
+                    <div className="mc-empty">
+                      <i className="bi bi-people" />
+                      <div className="mc-empty-text">No users found.</div>
+                    </div>
+                  )}
+                  {!loading && users.map(u => (
+                    <UserCard
+                      key={u.id}
+                      user={u}
+                      loading={loading}
+                      onEdit={r => {
+                        setEditUserTarget(r);
+                        editUserForm.setFieldsValue({ username: r.username, role: r.role });
+                        setEditUserOpen(true);
+                      }}
+                      onResetPwd={r => {
+                        setResetPwdTarget(r);
+                        resetPwdForm.resetFields();
+                        setResetPwdOpen(true);
+                      }}
+                      onToggleStatus={r => {
+                        setLoading(true);
+                        const nextStatus = r.status?.toLowerCase() === 'active' ? 'Disabled' : 'Active';
+                        api.put(`/api/users/${r.id}/status`, { status: nextStatus })
+                          .then(res => {
+                            if (res.data.status === 'success') { message.success('Status updated.'); fetchData(); }
+                            else message.error(res.data.message || 'Failed.');
+                          })
+                          .catch(err => message.error(err.response?.data?.message || 'Error.'))
+                          .finally(() => setLoading(false));
+                      }}
+                      onDelete={id => {
+                        setLoading(true);
+                        api.delete(`/api/users/${id}`)
+                          .then(res => {
+                            if (res.data.status === 'success') { message.success('User deleted.'); fetchData(); }
+                            else message.error(res.data.message || 'Failed to delete.');
+                          })
+                          .catch(err => message.error(err.response?.data?.message || 'Error deleting.'))
+                          .finally(() => setLoading(false));
+                      }}
+                    />
+                  ))}
+                </div>
+              )}
             </motion.div>
           )}
 
           {/* ── SETTINGS ── */}
-          {view === 'settings' && (
+          {isAdmin && view === 'settings' && (
             <motion.div 
             key="set"
             className="view-wrap"
@@ -1149,7 +1369,7 @@ const AdminPage = () => {
                   onFinish={async (values) => {
                     try {
                       setLoading(true);
-                      const res = await axios.post(`${API_BASE}/api/settings`, values);
+                      const res = await api.post('/api/settings', values);
                       if (res.data.status === 'success') {
                         message.success('Settings saved successfully.');
                       } else {
@@ -1175,6 +1395,108 @@ const AdminPage = () => {
                   <Button type="primary" htmlType="submit" className="btn-danger" style={{height:44}}>Save Settings</Button>
                 </Form>
               </Card>
+            </motion.div>
+          )}
+
+          {/* ── AUDIT LOGS ── */}
+          {isAdmin && view === 'audit-logs' && (
+            <motion.div key="audit" className="view-wrap" initial={{opacity:0,y:12}} animate={{opacity:1,y:0}} exit={{opacity:0}} transition={{duration:0.3}}>
+              {/* Audit filter toolbar */}
+              <div className="audit-filter-bar">
+                <div style={{display:'flex',gap:16,flexWrap:'wrap',alignItems:'center',width:'100%'}}>
+                  <div style={{ display: 'flex', gap: 8 }}>
+                    <Input
+                      className="custom-search-input"
+                      placeholder="Search user, target, description…"
+                      allowClear
+                      value={auditTempSearch}
+                      onChange={e => setAuditTempSearch(e.target.value)}
+                      onPressEnter={() => { setAuditSearch(auditTempSearch); setAuditPage(1); }}
+                      style={{ width: 300 }}
+                    />
+                    <Button type="primary" className="btn-blue" icon={<i className="bi bi-search" />} onClick={() => { setAuditSearch(auditTempSearch); setAuditPage(1); }} />
+                  </div>
+                  <Select
+                    placeholder="Filter by action"
+                    allowClear
+                    style={{width:180}}
+                    value={auditAction || undefined}
+                    onChange={val => { setAuditAction(val || ''); setAuditPage(1); }}
+                  >
+                    {auditActions.map(a => (
+                      <Select.Option key={a} value={a}>{a}</Select.Option>
+                    ))}
+                  </Select>
+                </div>
+              </div>
+
+              {/* Desktop table */}
+              {!isMobile && (
+                <Card className="admin-card-style sv-table-only">
+                  <Table
+                    dataSource={auditLogs}
+                    rowKey="id"
+                    loading={auditLoading}
+                    size="middle"
+                    className="sv-admin-table"
+                    pagination={{
+                      current: auditPage,
+                      pageSize: 20,
+                      total: auditTotal,
+                      showSizeChanger: false,
+                      onChange: (pg) => setAuditPage(pg)
+                    }}
+                    columns={[
+                      { title:'Time', dataIndex:'created_at', key:'t', width:160,
+                        render: v => dayjs(v).format('DD MMM YY HH:mm')
+                      },
+                      { title:'Admin', dataIndex:'admin_username', key:'a', width:120 },
+                      { title:'Action', dataIndex:'action', key:'ac', width:140,
+                        render: v => <Tag color="#C5A880">{v}</Tag>
+                      },
+                      { title:'Target', dataIndex:'target_type', key:'tt', width:110 },
+                      { title:'Name', dataIndex:'target_name', key:'tn' },
+                      { title:'Description', dataIndex:'description', key:'d',
+                        render: v => <span style={{fontSize:'0.82rem',color:'var(--text-muted)'}}>{v || '—'}</span>
+                      },
+                    ]}
+                  />
+                </Card>
+              )}
+
+              {/* Mobile cards */}
+              {isMobile && (
+                <div className="mc-card-list mc-mobile-only">
+                  {auditLoading && <div className="center-spin"><Spin /></div>}
+                  {!auditLoading && auditLogs.length === 0 && (
+                    <div className="mc-empty">
+                      <i className="bi bi-clock-history" />
+                      <div className="mc-empty-text">No audit logs found.</div>
+                    </div>
+                  )}
+                  {!auditLoading && auditLogs.map(log => (
+                    <AuditLogCard key={log.id} log={log} />
+                  ))}
+                  {/* Mobile pagination */}
+                  {auditTotal > 20 && (
+                    <div className="mc-pagination">
+                      <Button
+                        disabled={auditPage <= 1}
+                        onClick={() => setAuditPage(p => Math.max(1, p - 1))}
+                        style={{ marginRight: 8 }}
+                      >← Prev</Button>
+                      <span style={{ padding: '0 12px', lineHeight: '32px', fontSize: '0.85rem', color: '#78716C' }}>
+                        Page {auditPage} / {Math.ceil(auditTotal / 20)}
+                      </span>
+                      <Button
+                        disabled={auditPage >= Math.ceil(auditTotal / 20)}
+                        onClick={() => setAuditPage(p => p + 1)}
+                        style={{ marginLeft: 8 }}
+                      >Next →</Button>
+                    </div>
+                  )}
+                </div>
+              )}
             </motion.div>
           )}
 
@@ -1388,7 +1710,7 @@ const AdminPage = () => {
       <Modal title="Add Staff Account" open={userOpen} onCancel={()=>{ setUserOpen(false); userForm.resetFields(); }} footer={null} destroyOnClose width={420}>
         <Form layout="vertical" form={userForm} onFinish={createUser}>
           <Form.Item label="Username" name="username" rules={[{required:true}]}><Input /></Form.Item>
-          <Form.Item label="Password" name="password" rules={[{required:true}]}><Input.Password /></Form.Item>
+          <Form.Item label="Password" name="password" rules={[{required:true}]}><Input.Password className="better-pwd-input" size="large" visibilityToggle={{ visible: undefined, onVisibleChange: undefined }} /></Form.Item>
           <Form.Item label="Role" name="role" rules={[{required:true}]}>
             <Select>
               <Select.Option value="Admin">Admin</Select.Option>
@@ -1411,7 +1733,7 @@ const AdminPage = () => {
         <Form layout="vertical" form={editUserForm} onFinish={async (vals) => {
           try {
             setLoading(true);
-            const res = await axios.put(`${API_BASE}/api/users/${editUserTarget.id}`, {
+            const res = await api.put(`/api/users/${editUserTarget.id}`, {
               username: vals.username,
               role: vals.role,
             });
@@ -1455,7 +1777,7 @@ const AdminPage = () => {
         <Form layout="vertical" form={resetPwdForm} onFinish={async (vals) => {
           try {
             setLoading(true);
-            const res = await axios.put(`${API_BASE}/api/users/${resetPwdTarget.id}/password`, {
+            const res = await api.put(`/api/users/${resetPwdTarget.id}/password`, {
               password: vals.password,
             });
             if (res.data.status === 'success') {
@@ -1473,7 +1795,7 @@ const AdminPage = () => {
           }
         }}>
           <Form.Item label="New Password" name="password" rules={[{required:true, min:6, message:'Minimum 6 characters'}]}>
-            <Input.Password placeholder="Enter new password" />
+            <Input.Password className="better-pwd-input" size="large" placeholder="Enter new password" />
           </Form.Item>
           <Form.Item
             label="Confirm Password"
@@ -1486,7 +1808,7 @@ const AdminPage = () => {
               }
             })]}
           >
-            <Input.Password placeholder="Confirm new password" />
+            <Input.Password className="better-pwd-input" size="large" placeholder="Confirm new password" />
           </Form.Item>
           <Button type="primary" htmlType="submit" block className="btn-blue" style={{height:44}}>Reset Password</Button>
         </Form>

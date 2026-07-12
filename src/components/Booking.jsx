@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import axios from "axios";
+import api from "../api/axios";
 import dayjs from "dayjs";
 import {
   Form,
@@ -62,7 +62,7 @@ const LOCAL_ROOMS = [
 const { RangePicker } = DatePicker;
 const { Option } = Select;
 
-const API_URL = "https://shanvilla.pythonanywhere.com";
+const API_URL = "";
 
 /* ─── overlay / modal CSS injected once ─── */
 const MODAL_CSS = `
@@ -485,7 +485,7 @@ const BookingModal = ({ open, onClose, preRoom = null, createdBy = 'website' }) 
       const checkout = values.dates[1].format("YYYY-MM-DD");
       setSearchData({ checkin, checkout, guests: values.guests });
 
-      const resp = await axios.get(`${API_URL}/availability`, {
+      const resp = await api.get(`${API_URL}/availability`, {
         params: { checkin, checkout },
       });
 
@@ -540,7 +540,7 @@ const BookingModal = ({ open, onClose, preRoom = null, createdBy = 'website' }) 
         created_by: createdBy,
       };
 
-      const resp = await axios.post(`${API_URL}/create_booking`, payload);
+      const resp = await api.post(`${API_URL}/create_booking`, payload);
       setBookingRef(resp.data.booking_reference || "CONF-" + Date.now());
       // Optimistic local decrement + re-fetch from DB so badges survive a refresh
       decrementRoom(room.id);
