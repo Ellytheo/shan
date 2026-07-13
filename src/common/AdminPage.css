@@ -1558,7 +1558,7 @@ html {
   }
   .view-header-right {
     width: 100%;
-    justify-content: flex-start;  /* buttons stay left, never centred */
+    justify-content: flex-end;  /* align buttons to the right on mobile */
   }
   .view-title { font-size: 1.5rem; }
 }
