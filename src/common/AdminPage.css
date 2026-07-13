@@ -333,6 +333,7 @@ html {
   align-items: center;
   flex-wrap: wrap;
   gap: 16px;
+  margin-left: auto;
 }
 
 .menu-toggle-btn {

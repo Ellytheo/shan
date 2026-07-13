@@ -905,19 +905,19 @@ const AdminPage = () => {
               {/* Filters — always visible */}
               <Card className="admin-card-style" style={{ marginBottom: 16 }}>
                 <div className="filter-row">
-                  <div className="filter-group">
-                    <div style={{ display: 'flex', gap: 8 }}>
+                  <div className="filter-group" style={{ width: '100%' }}>
+                    <div className="search-input-group" style={{ display: 'flex', gap: 8, flex: '1 1 auto' }}>
                       <Input className="custom-search-input" placeholder="Name, phone, email, ref..." value={search}
-                        onChange={e=>setSearch(e.target.value)} style={{width:220}} />
+                        onChange={e=>setSearch(e.target.value)} style={{ flex: 1, minWidth: 150, maxWidth: 250 }} />
                       <Button type="primary" className="btn-blue" icon={<i className="bi bi-search" />} />
                     </div>
-                    <Select value={statusF} onChange={setStatusF} style={{width:135}}>
+                    <Select className="responsive-filter" value={statusF} onChange={setStatusF} style={{ flex: '1 1 auto', minWidth: 130, maxWidth: 160 }}>
                       <Select.Option value="all">All Statuses</Select.Option>
                       {Object.entries(STATUS_MAP).map(([k,v])=>(
                         <Select.Option key={k} value={k}>{v.label}</Select.Option>
                       ))}
                     </Select>
-                    <Select value={dateF} onChange={setDateF} style={{width:130}}>
+                    <Select className="responsive-filter" value={dateF} onChange={setDateF} style={{ flex: '1 1 auto', minWidth: 130, maxWidth: 160 }}>
                       <Select.Option value="all">All Dates</Select.Option>
                       <Select.Option value="today">Today</Select.Option>
                       <Select.Option value="tomorrow">Tomorrow</Select.Option>
@@ -925,10 +925,9 @@ const AdminPage = () => {
                       <Select.Option value="custom">Custom Range</Select.Option>
                     </Select>
                     {dateF==='custom' && (
-                      <DatePicker.RangePicker value={customRange} onChange={setCustomRange} style={{width:220}}/>
+                      <DatePicker.RangePicker className="responsive-filter" value={customRange} onChange={setCustomRange} style={{ flex: '1 1 auto', minWidth: 200, maxWidth: 250 }}/>
                     )}
                   </div>
-                  <Button onClick={fetchData} loading={loading} icon={<i className="bi bi-arrow-clockwise"/>}>Refresh</Button>
                 </div>
               </Card>
 
