@@ -243,7 +243,8 @@ const ContactSection = () => {
           }}
         >
           <iframe
-            src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3989.4343610196247!2d37.13265537397124!3d-0.7948902352843993!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x1828a5002657145f%3A0xbb670eb1d023578!2sShanVilla!5e0!3m2!1sen!2ske!4v1751955495284!5m2!1sen!2ske"
+            src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d997.3575390838004!2d37.136250879987756!3d-0.7992308201937033!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x1828a5002657145f%3A0xbb670eb1d023578!2sShanVilla%20Resort%20Maragua!5e0!3m2!1sen!2ske!4v1784029047656!5m2!1sen!2ske"
+            referrerPolicy="strict-origin-when-cross-origin"
             width="100%"
             height="100%"
             style={{ border: 0 }}
