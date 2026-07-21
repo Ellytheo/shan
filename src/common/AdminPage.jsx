@@ -129,10 +129,22 @@ const AdminPage = () => {
   const [resetPwdOpen, setResetPwdOpen]     = useState(false);
   const [resetPwdForm] = Form.useForm();
 
-  /* reply */
+  /* reply / read inquiry */
   const [replyOpen, setReplyOpen]   = useState(false);
   const [replyTarget, setReplyTarget] = useState(null);
   const [replyText, setReplyText]   = useState('');
+  const [viewInquiry, setViewInquiry] = useState(null);
+
+  const handleReadInquiry = async (inquiry) => {
+    setReadSet(p => new Set([...p, inquiry.id]));
+    setViewInquiry(inquiry);
+    try {
+      await api.put(`/update_contact_status/${inquiry.id}`, { status: 'read' });
+      setContacts(prev => prev.map(c => c.id === inquiry.id ? { ...c, status: 'read' } : c));
+    } catch (err) {
+      console.error('Failed to update inquiry status', err);
+    }
+  };
 
   /* settings */
   const [settingsForm] = Form.useForm();
@@ -202,7 +214,12 @@ const AdminPage = () => {
         api.get('/api/users').catch(() => null),    // Fetch users list from backend
       ]);
 
-      if (cRes.data.status === 'success') setContacts(cRes.data.data || []);
+      if (cRes.data.status === 'success') {
+        const data = cRes.data.data || [];
+        setContacts(data);
+        const readIds = data.filter(c => c.status === 'read').map(c => c.id);
+        setReadSet(new Set(readIds));
+      }
       else message.error('Failed to load inquiries.');
 
       if (bRes.data.status === 'success') setBookings(bRes.data.bookings || []);
@@ -723,15 +740,12 @@ const AdminPage = () => {
     { title:'Phone', dataIndex:'phone', key:'phone', responsive:['md'] },
     { title:'Message', dataIndex:'message', key:'msg', ellipsis:true },
     { title:'Status', key:'s', width:100,
-      render:(_,r) => <Tag color={repliedSet.has(r.id)?'#1C1917':'#D4AF37'}>{repliedSet.has(r.id)?'Replied':'Pending'}</Tag> },
-    { title:'Actions', key:'act', width:220, fixed:'right',
+      render:(_,r) => <Tag color={readSet.has(r.id)?'#10B981':'#D4AF37'}>{readSet.has(r.id)?'Read':'Unread'}</Tag> },
+    { title:'Actions', key:'act', width:160, fixed:'right',
       render:(_,r) => (
         <div className="inq-actions">
-          <button className="inq-btn inq-btn--muted" onClick={() => setReadSet(p=>new Set([...p,r.id]))}>
-            <i className="bi bi-check2-circle" /> Read
-          </button>
-          <button className="inq-btn inq-btn--primary" onClick={() => { setReplyTarget(r); setReplyOpen(true); }}>
-            <i className="bi bi-reply" /> Reply
+          <button className="inq-btn inq-btn--muted" onClick={() => handleReadInquiry(r)}>
+            <i className="bi bi-eye" /> Read
           </button>
           <Popconfirm title="Delete this inquiry?" onConfirm={()=>deleteContact(r.id)} okText="Yes" cancelText="No" placement="topRight">
             <button className="inq-btn inq-btn--danger">
@@ -1118,9 +1132,7 @@ const AdminPage = () => {
                       key={c.id}
                       contact={c}
                       isRead={readSet.has(c.id)}
-                      isReplied={repliedSet.has(c.id)}
-                      onRead={id => setReadSet(p => new Set([...p, id]))}
-                      onReply={ct => { setReplyTarget(ct); setReplyOpen(true); }}
+                      onRead={handleReadInquiry}
                       onDelete={deleteContact}
                     />
                   ))}
@@ -1690,17 +1702,60 @@ const AdminPage = () => {
         )}
       </Modal>
 
-      {/* ── REPLY MODAL ── */}
-      <Modal title={`Reply to ${replyTarget?.first_name}`} open={replyOpen}
-        onCancel={()=>{ setReplyOpen(false); setReplyText(''); }}
-        onOk={()=>{ message.success(`Reply sent to ${replyTarget?.email}`); setRepliedSet(p=>new Set([...p,replyTarget.id])); setReplyOpen(false); setReplyText(''); }}
-        okText="Send Reply" okButtonProps={{className:'btn-blue'}} destroyOnClose>
-        {replyTarget && (
-          <div>
-            <div style={{background:'#F8FAFC',padding:12,borderRadius:8,marginBottom:12,fontSize:'0.88rem',color:'#475569'}}>
-              <strong>Original:</strong> {replyTarget.message}
+      {/* ── INQUIRY DETAIL MODAL ── */}
+      <Modal 
+        title="Inquiry Details" 
+        open={Boolean(viewInquiry)} 
+        onCancel={() => setViewInquiry(null)}
+        footer={[
+          <Button key="close" type="primary" className="btn-blue" onClick={() => setViewInquiry(null)}>
+            Close
+          </Button>
+        ]} 
+        destroyOnClose
+        width={500}
+      >
+        {viewInquiry && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 14, paddingTop: 6 }}>
+            <div>
+              <div style={{ fontSize: '0.8rem', color: '#64748B', fontWeight: 600 }}>GUEST NAME</div>
+              <div style={{ fontSize: '1rem', fontWeight: 600, color: '#1E293B' }}>
+                {viewInquiry.first_name} {viewInquiry.last_name}
+              </div>
             </div>
-            <Input.TextArea value={replyText} onChange={e=>setReplyText(e.target.value)} rows={5} placeholder="Type your reply..." />
+
+            <div style={{ display: 'flex', gap: 20 }}>
+              <div style={{ flex: 1 }}>
+                <div style={{ fontSize: '0.8rem', color: '#64748B', fontWeight: 600 }}>EMAIL</div>
+                <div style={{ fontSize: '0.9rem', color: '#334155' }}>
+                  <a href={`mailto:${viewInquiry.email}`} style={{ color: '#2563EB' }}>{viewInquiry.email}</a>
+                </div>
+              </div>
+              {viewInquiry.phone && (
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontSize: '0.8rem', color: '#64748B', fontWeight: 600 }}>PHONE</div>
+                  <div style={{ fontSize: '0.9rem', color: '#334155' }}>
+                    <a href={`tel:${viewInquiry.phone}`} style={{ color: '#2563EB' }}>{viewInquiry.phone}</a>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <div>
+              <div style={{ fontSize: '0.8rem', color: '#64748B', fontWeight: 600, marginBottom: 4 }}>FULL MESSAGE</div>
+              <div style={{ 
+                background: '#F8FAFC', 
+                border: '1px solid #E2E8F0', 
+                padding: '12px 14px', 
+                borderRadius: 8, 
+                fontSize: '0.92rem', 
+                color: '#334155',
+                whiteSpace: 'pre-wrap',
+                lineHeight: 1.5
+              }}>
+                {viewInquiry.message || <em>No message content.</em>}
+              </div>
+            </div>
           </div>
         )}
       </Modal>

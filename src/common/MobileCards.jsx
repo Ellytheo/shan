@@ -200,7 +200,7 @@ export function AuditLogCard({ log }) {
 /* ═══════════════════════════════════════════════════
    INQUIRY CARD
    ═══════════════════════════════════════════════════ */
-export function InquiryCard({ contact, isRead, isReplied, onRead, onReply, onDelete }) {
+export function InquiryCard({ contact, isRead, onRead, onDelete }) {
   return (
     <div className={`mc-card ${!isRead ? 'mc-card--unread' : ''}`}>
       {!isRead && <div className="mc-card-stripe" style={{ background: '#F59E0B' }} />}
@@ -213,12 +213,12 @@ export function InquiryCard({ contact, isRead, isReplied, onRead, onReply, onDel
           <div style={{ fontSize: '0.78rem', color: '#78716C', marginTop: 2 }}>{contact.email}</div>
         </div>
         <span className="mc-status-badge" style={{
-          background: isReplied ? '#D1FAE5' : '#FEF3C7',
-          color:      isReplied ? '#065F46' : '#92400E',
-          border:     `1px solid ${isReplied ? '#6EE7B7' : '#FDE68A'}`,
+          background: isRead ? '#D1FAE5' : '#FEF3C7',
+          color:      isRead ? '#065F46' : '#92400E',
+          border:     `1px solid ${isRead ? '#6EE7B7' : '#FDE68A'}`,
           whiteSpace: 'nowrap',
         }}>
-          {isReplied ? 'Replied' : 'Pending'}
+          {isRead ? 'Read' : 'Unread'}
         </span>
       </div>
       {contact.phone && (
@@ -230,11 +230,8 @@ export function InquiryCard({ contact, isRead, isReplied, onRead, onReply, onDel
         <div className="mc-message-preview">{contact.message}</div>
       )}
       <div className="mc-card-actions">
-        <button className="mc-btn mc-btn--muted"    onClick={() => onRead(contact.id)}>
-          <i className="bi bi-check2-circle" /> Read
-        </button>
-        <button className="mc-btn mc-btn--primary"  onClick={() => onReply(contact)}>
-          <i className="bi bi-reply" /> Reply
+        <button className="mc-btn mc-btn--muted" onClick={() => onRead(contact)}>
+          <i className="bi bi-eye" /> Read
         </button>
         <Popconfirm title="Delete this inquiry?" onConfirm={() => onDelete(contact.id)} okText="Yes" cancelText="No" placement="top">
           <button className="mc-btn mc-btn--danger">
