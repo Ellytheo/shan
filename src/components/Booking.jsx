@@ -3,7 +3,6 @@ import api from "../api/axios";
 import dayjs from "dayjs";
 import {
   Form,
-  DatePicker,
   Select,
   Button,
   Input,
@@ -11,6 +10,8 @@ import {
   Spin,
   message,
 } from "antd";
+import { DayPicker } from "react-day-picker";
+import "react-day-picker/style.css";
 import { motion, AnimatePresence } from "framer-motion";
 import { useRoomAvailability } from "../context/RoomAvailabilityContext";
 
@@ -59,7 +60,6 @@ const LOCAL_ROOMS = [
   },
 ];
 
-const { RangePicker } = DatePicker;
 const { Option } = Select;
 
 const API_URL = "";
@@ -73,25 +73,23 @@ const MODAL_CSS = `
     inset: 0;
     z-index: 2000;
     display: flex;
-    align-items: center;
+    align-items: flex-start;
     justify-content: center;
-    padding: 16px;
+    padding: clamp(40px, 6vh, 80px) 16px 24px;
     background: rgba(0, 0, 0, 0.65);
     backdrop-filter: blur(6px);
     -webkit-backdrop-filter: blur(6px);
     pointer-events: auto;
+    overflow-y: auto;
   }
 
   .sv-bk-modal {
     position: relative;
     width: min(calc(100vw - 32px), 760px);
-    max-height: 90vh;
-    overflow-y: auto;
     background: linear-gradient(160deg, #FFF8EE 0%, #FAF5EF 100%);
     border-radius: 24px;
     box-shadow: 0 40px 80px rgba(0,0,0,0.45), 0 0 0 1px rgba(212,175,55,0.2);
-    scrollbar-width: thin;
-    scrollbar-color: #C6A355 transparent;
+    flex-shrink: 0;
   }
 
   .sv-bk-modal::-webkit-scrollbar { width: 6px; }
@@ -231,106 +229,17 @@ const MODAL_CSS = `
     color: #2C3E50;
   }
   .sv-bk-modal .ant-input,
-  .sv-bk-modal .ant-picker,
   .sv-bk-modal .ant-select-selector {
     border-radius: 10px !important;
     border-color: rgba(198,163,85,0.4) !important;
     background: #FFFDF8 !important;
   }
   .sv-bk-modal .ant-input:focus,
-  .sv-bk-modal .ant-picker-focused,
   .sv-bk-modal .ant-select-focused .ant-select-selector {
     border-color: #C6A355 !important;
     box-shadow: 0 0 0 2px rgba(198,163,85,0.18) !important;
   }
-
-  /* Ensure datepicker and select dropdown overlays sit in front of modal z-index: 2000 */
-  .ant-picker-dropdown,
-  .ant-select-dropdown {
-    z-index: 2500 !important;
-  }
-
-  /* ── Responsive RangePicker dropdown ────────────────────────────────────
-     On small screens: center the popup in the viewport (mirrors the parent
-     modal), stack the two calendar panels vertically, and shrink cells. */
-  @media (max-width: 600px) {
-    /* ── Center the popup in the viewport like the parent modal ── */
-    .sv-bk-picker-popup {
-      position: fixed !important;
-      top: 50% !important;
-      left: 50% !important;
-      transform: translate(-50%, -50%) !important;
-      width: calc(100vw - 32px) !important;
-      max-width: 420px !important;
-      animation: svPickerFadeIn 0.2s ease !important;
-    }
-    @keyframes svPickerFadeIn {
-      from { opacity: 0; transform: translate(-50%, -48%); }
-      to   { opacity: 1; transform: translate(-50%, -50%); }
-    }
-    .sv-bk-picker-popup .ant-picker-panel-container {
-      width: 100% !important;
-      max-width: 100% !important;
-      overflow-x: hidden !important;
-      border-radius: 16px !important;
-      box-shadow: 0 24px 60px rgba(0,0,0,0.35) !important;
-    }
-    /* Stack the two panels vertically instead of side-by-side */
-    .sv-bk-picker-popup .ant-picker-panels {
-      flex-direction: column !important;
-    }
-    /* Each panel fills the container */
-    .sv-bk-picker-popup .ant-picker-panel,
-    .sv-bk-picker-popup .ant-picker-date-panel,
-    .sv-bk-picker-popup .ant-picker-month-panel,
-    .sv-bk-picker-popup .ant-picker-year-panel {
-      width: 100% !important;
-    }
-    .sv-bk-picker-popup .ant-picker-content {
-      width: 100% !important;
-    }
-    /* Shrink cells so they fit on narrow viewports */
-    .sv-bk-picker-popup .ant-picker-cell {
-      padding: 2px 0 !important;
-    }
-    .sv-bk-picker-popup .ant-picker-cell-inner {
-      min-width: 28px !important;
-      height: 28px !important;
-      line-height: 28px !important;
-      font-size: 0.78rem !important;
-    }
-    .sv-bk-picker-popup .ant-picker-header-view button {
-      font-size: 0.85rem !important;
-    }
-    /* Hide duplicate nav arrows when panels are stacked */
-    .sv-bk-picker-popup .ant-picker-panel:nth-child(2) .ant-picker-header-prev-btn,
-    .sv-bk-picker-popup .ant-picker-panel:nth-child(2) .ant-picker-header-super-prev-btn {
-      visibility: hidden !important;
-    }
-    .sv-bk-picker-popup .ant-picker-panel:nth-child(1) .ant-picker-header-next-btn,
-    .sv-bk-picker-popup .ant-picker-panel:nth-child(1) .ant-picker-header-super-next-btn {
-      visibility: hidden !important;
-    }
-    /* Range footer bar */
-    .sv-bk-picker-popup .ant-picker-footer {
-      border-radius: 0 0 16px 16px !important;
-    }
-  }
-
-  @media (max-width: 400px) {
-    .sv-bk-picker-popup {
-      width: calc(100vw - 24px) !important;
-    }
-    .sv-bk-picker-popup .ant-picker-cell-inner {
-      min-width: 24px !important;
-      height: 24px !important;
-      line-height: 24px !important;
-      font-size: 0.72rem !important;
-    }
-    .sv-bk-picker-popup .ant-picker-header {
-      padding: 4px 2px !important;
-    }
-  }
+  .ant-select-dropdown { z-index: 2500 !important; }
 
   .sv-bk-submit-btn {
     width: 100%;
@@ -457,8 +366,97 @@ const MODAL_CSS = `
     color: #0F8F46;
   }
 
+  /* ── react-day-picker themed wrapper ─────────────────────────────────────
+     Uses CSS custom properties supported by rdp v9+/v10               */
+  .sv-rdp-wrap {
+    --rdp-accent-color: #C6A355;
+    --rdp-accent-background-color: rgba(198,163,85,0.12);
+    --rdp-range-start-color: #fff;
+    --rdp-range-start-background: #C6A355;
+    --rdp-range-end-color: #fff;
+    --rdp-range-end-background: #C6A355;
+    --rdp-range-middle-background-color: rgba(198,163,85,0.12);
+    --rdp-selected-border: 2px solid #C6A355;
+    --rdp-today-color: #0F8F46;
+    --rdp-font-family: 'Inter', sans-serif;
+    border: 1.5px solid rgba(198,163,85,0.35);
+    border-radius: 14px;
+    background: #FFFDF8;
+    padding: 4px 0 8px;
+    margin-bottom: 8px;
+    overflow: hidden;
+  }
+  .sv-rdp-wrap .rdp {
+    margin: 0 auto;
+    --rdp-cell-size: clamp(32px, 10vw, 40px);
+  }
+  .sv-rdp-wrap .rdp-nav button:hover {
+    background: rgba(198,163,85,0.15) !important;
+    color: #8B5E05 !important;
+  }
+  .sv-rdp-wrap .rdp-caption_label {
+    font-family: 'Playfair Display', serif;
+    font-size: 1rem;
+    font-weight: 700;
+    color: #1C2A3A;
+  }
+  .sv-rdp-wrap .rdp-head_cell {
+    font-size: 0.72rem;
+    font-weight: 700;
+    color: #7A8B9E;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+  .sv-rdp-wrap .rdp-day_today:not(.rdp-day_selected) {
+    color: #0F8F46;
+    font-weight: 700;
+  }
+  .sv-rdp-wrap .rdp-day_selected,
+  .sv-rdp-wrap .rdp-day_range_start,
+  .sv-rdp-wrap .rdp-day_range_end {
+    background-color: #C6A355 !important;
+    color: #fff !important;
+    border-radius: 50% !important;
+  }
+  .sv-rdp-wrap .rdp-day_range_middle {
+    background-color: rgba(198,163,85,0.15) !important;
+    border-radius: 0 !important;
+    color: #1C2A3A !important;
+  }
+  .sv-rdp-wrap .rdp-day:hover:not(.rdp-day_disabled):not(.rdp-day_selected) {
+    background-color: rgba(198,163,85,0.2) !important;
+    border-radius: 50% !important;
+  }
+  .sv-rdp-wrap .rdp-day_disabled {
+    color: #C7C7C7 !important;
+    cursor: not-allowed !important;
+  }
+
+  /* Summary badge below calendar */
+  .sv-rdp-badge {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 4px 12px 0;
+    padding: 8px 14px;
+    background: rgba(15,143,70,0.07);
+    border: 1px solid rgba(15,143,70,0.18);
+    border-radius: 30px;
+    font-size: 0.82rem;
+    font-weight: 600;
+    color: #0F8F46;
+  }
+  .sv-rdp-error {
+    color: #EF4444;
+    font-size: 0.82rem;
+    margin-top: 4px;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+
   @media (max-width: 480px) {
-    .sv-bk-overlay { padding: 16px; }
+    .sv-bk-overlay { padding: 24px 16px 24px; }
     .sv-bk-body { padding: 20px 18px 28px; }
   }
 `;
@@ -486,6 +484,33 @@ const modalVar = {
   exit: { opacity: 0, scale: 0.92, y: 16, transition: { duration: 0.22, ease: "easeIn" } },
 };
 
+/* ─── Inline range date picker component ─── */
+const SvRangePicker = ({ range, onSelect, showError }) => (
+  <div className="sv-rdp-wrap">
+    <DayPicker
+      mode="range"
+      selected={range}
+      onSelect={onSelect}
+      disabled={{ before: new Date() }}
+      numberOfMonths={1}
+      showOutsideDays
+    />
+    {range?.from && range?.to ? (
+      <div className="sv-rdp-badge">
+        <i className="bi bi-calendar-check" />
+        {dayjs(range.from).format("DD MMM YYYY")} → {dayjs(range.to).format("DD MMM YYYY")}
+        &nbsp;·&nbsp;
+        {dayjs(range.to).diff(dayjs(range.from), "day")} night
+        {dayjs(range.to).diff(dayjs(range.from), "day") !== 1 ? "s" : ""}
+      </div>
+    ) : showError ? (
+      <div className="sv-rdp-error">
+        <i className="bi bi-exclamation-circle" /> Please select check-in &amp; check-out dates
+      </div>
+    ) : null}
+  </div>
+);
+
 /* ═══════════════════════════════════════════════════════════════════════════
    BookingModal – exported component
    Props:
@@ -502,21 +527,24 @@ const BookingModal = ({ open, onClose, preRoom = null, createdBy = 'website' }) 
   /* ── state ── */
   const [availLoading, setAvailLoading]   = useState(false);
   const [availRooms,   setAvailRooms]     = useState([]);
-  const [searchData,   setSearchData]     = useState(null);   // dates + guests from step-1
-  const [selectedRoom, setSelectedRoom]   = useState(null);   // room picked from availability grid
+  const [searchData,   setSearchData]     = useState(null);
+  const [selectedRoom, setSelectedRoom]   = useState(null);
   const [bookingLoading, setBookingLoading] = useState(false);
   const [bookingRef,   setBookingRef]     = useState("");
 
-  /* ── derive active room synchronously (no useEffect race) ── */
-  // In direct mode preRoom is always the room; in general mode it's whatever
-  // the user picked from the availability grid.
+  /* date range state — replaces Form.useWatch("dates") */
+  const [availRange, setAvailRange] = useState({});
+  const [bookRange,  setBookRange]  = useState({});
+  const [showAvailDateError, setShowAvailDateError] = useState(false);
+  const [showBookDateError,  setShowBookDateError]  = useState(false);
+
+  /* ── derive active room synchronously ── */
   const bookingRoom = preRoom || selectedRoom;
 
   const [availForm] = Form.useForm();
   const [bookForm]  = Form.useForm();
 
-  /* ── watch form fields for live summary ── */
-  const selectedDates  = Form.useWatch("dates",  bookForm);
+  /* still watch guests for live summary */
   const selectedGuests = Form.useWatch("guests", bookForm);
 
   /* ── derive mode ── */
@@ -530,6 +558,10 @@ const BookingModal = ({ open, onClose, preRoom = null, createdBy = 'website' }) 
         setSearchData(null);
         setSelectedRoom(null);
         setBookingRef("");
+        setAvailRange({});
+        setBookRange({});
+        setShowAvailDateError(false);
+        setShowBookDateError(false);
         availForm.resetFields();
         bookForm.resetFields();
       }, 300);
@@ -539,21 +571,19 @@ const BookingModal = ({ open, onClose, preRoom = null, createdBy = 'website' }) 
 
   /* ── derive stay dates & guests ── */
   const checkinVal = directMode
-    ? (selectedDates?.[0] ? selectedDates[0].format("YYYY-MM-DD") : null)
+    ? (bookRange?.from ? dayjs(bookRange.from).format("YYYY-MM-DD") : null)
     : searchData?.checkin;
   const checkoutVal = directMode
-    ? (selectedDates?.[1] ? selectedDates[1].format("YYYY-MM-DD") : null)
+    ? (bookRange?.to ? dayjs(bookRange.to).format("YYYY-MM-DD") : null)
     : searchData?.checkout;
-  const guestsVal = directMode
-    ? selectedGuests
-    : searchData?.guests;
+  const guestsVal = directMode ? selectedGuests : searchData?.guests;
 
-  // calculate nights
+  /* calculate nights */
   const nights = (checkinVal && checkoutVal)
     ? dayjs(checkoutVal).diff(dayjs(checkinVal), "day")
     : 0;
 
-  // calculate total price
+  /* calculate total price */
   const roomPricePerNight = bookingRoom
     ? (bookingRoom.price || bookingRoom.startingPrice || 0)
     : 0;
@@ -561,17 +591,22 @@ const BookingModal = ({ open, onClose, preRoom = null, createdBy = 'website' }) 
 
   /* ── step-1: check availability ── */
   const handleCheckAvailability = async (values) => {
+    /* validate date range manually */
+    if (!availRange?.from || !availRange?.to) {
+      setShowAvailDateError(true);
+      return;
+    }
+    setShowAvailDateError(false);
     try {
       setAvailLoading(true);
-      const checkin = values.dates[0].format("YYYY-MM-DD");
-      const checkout = values.dates[1].format("YYYY-MM-DD");
+      const checkin  = dayjs(availRange.from).format("YYYY-MM-DD");
+      const checkout = dayjs(availRange.to).format("YYYY-MM-DD");
       setSearchData({ checkin, checkout, guests: values.guests });
 
       const resp = await api.get(`${API_URL}/availability`, {
         params: { checkin, checkout },
       });
 
-      // Merge API response with local room data for images / descriptions
       const apiRooms = resp.data.rooms || [];
       const merged = apiRooms.map((apiRoom) => {
         const local = LOCAL_ROOMS.find(
@@ -595,6 +630,13 @@ const BookingModal = ({ open, onClose, preRoom = null, createdBy = 'website' }) 
 
   /* ── step-2: confirm booking ── */
   const handleBooking = async (values) => {
+    /* validate date range for direct mode */
+    if (directMode && (!bookRange?.from || !bookRange?.to)) {
+      setShowBookDateError(true);
+      return;
+    }
+    setShowBookDateError(false);
+
     const room = bookingRoom;
     if (!room) {
       message.error("No room selected. Please try again.");
@@ -602,29 +644,23 @@ const BookingModal = ({ open, onClose, preRoom = null, createdBy = 'website' }) 
     }
     try {
       setBookingLoading(true);
-      // For direct mode, collect dates from the direct form
-      const checkin = directMode
-        ? values.dates[0].format("YYYY-MM-DD")
-        : searchData.checkin;
-      const checkout = directMode
-        ? values.dates[1].format("YYYY-MM-DD")
-        : searchData.checkout;
-      const guests = directMode ? values.guests : searchData.guests;
+      const checkin  = directMode ? dayjs(bookRange.from).format("YYYY-MM-DD") : searchData.checkin;
+      const checkout = directMode ? dayjs(bookRange.to).format("YYYY-MM-DD")   : searchData.checkout;
+      const guests   = directMode ? values.guests : searchData.guests;
 
       const payload = {
-        guest_name: values.guest_name,
-        email: values.email,
-        phone: values.phone,
-        room_type_id: room.id,
-        checkin_date: checkin,
-        checkout_date: checkout,
+        guest_name:     values.guest_name,
+        email:          values.email,
+        phone:          values.phone,
+        room_type_id:   room.id,
+        checkin_date:   checkin,
+        checkout_date:  checkout,
         guests,
-        created_by: createdBy,
+        created_by:     createdBy,
       };
 
       const resp = await api.post(`${API_URL}/create_booking`, payload);
       setBookingRef(resp.data.booking_reference || "CONF-" + Date.now());
-      // Optimistic local decrement + re-fetch from DB so badges survive a refresh
       decrementRoom(room.id);
       refreshAvailability();
       message.success("Booking confirmed!");
@@ -638,15 +674,11 @@ const BookingModal = ({ open, onClose, preRoom = null, createdBy = 'website' }) 
     }
   };
 
-  const disabledDate = (current) => current && current < dayjs().startOf("day");
-
   /* ── which "page" are we showing? ── */
   const showAvailPage = !directMode && !selectedRoom;
   const showBookPage  = Boolean(bookingRoom);
 
-  const handleClose = () => {
-    onClose?.();
-  };
+  const handleClose = () => onClose?.();
 
   /* ─────────────────────────────── RENDER ─────────────────────────────── */
   return (
@@ -721,16 +753,11 @@ const BookingModal = ({ open, onClose, preRoom = null, createdBy = 'website' }) 
               {!bookingRef && showAvailPage && (
                 <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
                   <Form layout="vertical" form={availForm} onFinish={handleCheckAvailability}>
-                    <Form.Item
-                      label="Check-in & Check-out Dates"
-                      name="dates"
-                      rules={[{ required: true, message: "Please select your stay dates" }]}
-                    >
-                      <RangePicker
-                        size="large"
-                        disabledDate={disabledDate}
-                        style={{ width: "100%", borderRadius: 10 }}
-                        popupClassName="sv-bk-picker-popup"
+                    <Form.Item label="Check-in & Check-out Dates">
+                      <SvRangePicker
+                        range={availRange}
+                        onSelect={(r) => { setAvailRange(r || {}); setShowAvailDateError(false); }}
+                        showError={showAvailDateError}
                       />
                     </Form.Item>
 
@@ -847,16 +874,11 @@ const BookingModal = ({ open, onClose, preRoom = null, createdBy = 'website' }) 
                     {/* Direct mode: include date + guests fields */}
                     {directMode && (
                       <>
-                        <Form.Item
-                          label="Check-in & Check-out Dates"
-                          name="dates"
-                          rules={[{ required: true, message: "Please select your stay dates" }]}
-                        >
-                          <RangePicker
-                            size="large"
-                            disabledDate={disabledDate}
-                            style={{ width: "100%", borderRadius: 10 }}
-                            popupClassName="sv-bk-picker-popup"
+                        <Form.Item label="Check-in & Check-out Dates">
+                          <SvRangePicker
+                            range={bookRange}
+                            onSelect={(r) => { setBookRange(r || {}); setShowBookDateError(false); }}
+                            showError={showBookDateError}
                           />
                         </Form.Item>
 
