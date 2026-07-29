@@ -491,10 +491,16 @@ input.better-pwd-input {
   transition: all 0.2s ease;
 }
 button.ant-btn.user-action-btn:hover,
-button.ant-btn.user-action-btn:focus {
+button.ant-btn.user-action-btn:focus-visible {
   background-color: #ff4d4f !important;
   border-color: #ff4d4f !important;
   color: white !important;
+}
+button.ant-btn.user-action-btn:focus:not(:focus-visible):not(:hover) {
+  background-color: #FFF !important;
+  border-color: #E8ECF1 !important;
+  color: var(--text-main, #1C1917) !important;
+  box-shadow: none !important;
 }
 .user-action-btn:active {
   background-color: transparent !important;
