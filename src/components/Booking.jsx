@@ -73,9 +73,9 @@ const MODAL_CSS = `
     inset: 0;
     z-index: 2000;
     display: flex;
-    align-items: flex-start;
+    align-items: center;
     justify-content: center;
-    padding: clamp(24px, 4vh, 48px) 16px 24px;
+    padding: 16px;
     background: rgba(0, 0, 0, 0.65);
     backdrop-filter: blur(6px);
     -webkit-backdrop-filter: blur(6px);
@@ -84,7 +84,7 @@ const MODAL_CSS = `
 
   .sv-bk-modal {
     position: relative;
-    width: min(calc(100vw - 32px), 760px);
+    width: min(92vw, 760px);
     max-height: 90vh;
     overflow-y: auto;
     background: linear-gradient(160deg, #FFF8EE 0%, #FAF5EF 100%);
@@ -251,36 +251,23 @@ const MODAL_CSS = `
   }
 
   /* ── Responsive RangePicker dropdown ────────────────────────────────────
-     On small screens: center the popup in the viewport (mirrors the parent
-     modal), stack the two calendar panels vertically, and shrink cells. */
+     Ant Design renders two side-by-side calendar panels by default.
+     On small screens we collapse them to a single stacked layout. */
   @media (max-width: 600px) {
-    /* ── Center the popup in the viewport like the parent modal ── */
-    .sv-bk-picker-popup {
-      position: fixed !important;
-      top: 50% !important;
-      left: 50% !important;
-      transform: translate(-50%, -50%) !important;
-      width: calc(100vw - 32px) !important;
-      max-width: 420px !important;
-      animation: svPickerFadeIn 0.2s ease !important;
-    }
-    @keyframes svPickerFadeIn {
-      from { opacity: 0; transform: translate(-50%, -48%); }
-      to   { opacity: 1; transform: translate(-50%, -50%); }
-    }
     .sv-bk-picker-popup .ant-picker-panel-container {
       width: 100% !important;
-      max-width: 100% !important;
+      max-width: calc(100vw - 32px) !important;
       overflow-x: hidden !important;
-      border-radius: 16px !important;
-      box-shadow: 0 24px 60px rgba(0,0,0,0.35) !important;
     }
     /* Stack the two panels vertically instead of side-by-side */
     .sv-bk-picker-popup .ant-picker-panels {
       flex-direction: column !important;
     }
     /* Each panel fills the container */
-    .sv-bk-picker-popup .ant-picker-panel,
+    .sv-bk-picker-popup .ant-picker-panel {
+      width: 100% !important;
+    }
+    /* Make the header and table fit */
     .sv-bk-picker-popup .ant-picker-date-panel,
     .sv-bk-picker-popup .ant-picker-month-panel,
     .sv-bk-picker-popup .ant-picker-year-panel {
@@ -302,7 +289,7 @@ const MODAL_CSS = `
     .sv-bk-picker-popup .ant-picker-header-view button {
       font-size: 0.85rem !important;
     }
-    /* Hide duplicate nav arrows when panels are stacked */
+    /* Hide the second panel's prev/next arrows to avoid duplication */
     .sv-bk-picker-popup .ant-picker-panel:nth-child(2) .ant-picker-header-prev-btn,
     .sv-bk-picker-popup .ant-picker-panel:nth-child(2) .ant-picker-header-super-prev-btn {
       visibility: hidden !important;
@@ -311,16 +298,9 @@ const MODAL_CSS = `
     .sv-bk-picker-popup .ant-picker-panel:nth-child(1) .ant-picker-header-super-next-btn {
       visibility: hidden !important;
     }
-    /* Range footer bar */
-    .sv-bk-picker-popup .ant-picker-footer {
-      border-radius: 0 0 16px 16px !important;
-    }
   }
 
   @media (max-width: 400px) {
-    .sv-bk-picker-popup {
-      width: calc(100vw - 24px) !important;
-    }
     .sv-bk-picker-popup .ant-picker-cell-inner {
       min-width: 24px !important;
       height: 24px !important;
@@ -458,7 +438,7 @@ const MODAL_CSS = `
   }
 
   @media (max-width: 480px) {
-    .sv-bk-overlay { padding: 16px; }
+    .sv-bk-overlay { padding: 10px; }
     .sv-bk-body { padding: 20px 18px 28px; }
   }
 `;
@@ -506,10 +486,6 @@ const BookingModal = ({ open, onClose, preRoom = null, createdBy = 'website' }) 
   const [selectedRoom, setSelectedRoom]   = useState(null);   // room picked from availability grid
   const [bookingLoading, setBookingLoading] = useState(false);
   const [bookingRef,   setBookingRef]     = useState("");
-
-  /* ── picker popup open control (auto-hides on date selection) ── */
-  const [availPickerOpen, setAvailPickerOpen] = useState(undefined);
-  const [bookPickerOpen,  setBookPickerOpen]  = useState(undefined);
 
   /* ── derive active room synchronously (no useEffect race) ── */
   // In direct mode preRoom is always the room; in general mode it's whatever
@@ -628,8 +604,9 @@ const BookingModal = ({ open, onClose, preRoom = null, createdBy = 'website' }) 
 
       const resp = await api.post(`${API_URL}/create_booking`, payload);
       setBookingRef(resp.data.booking_reference || "CONF-" + Date.now());
-      // Optimistic local decrement
+      // Optimistic local decrement + re-fetch from DB so badges survive a refresh
       decrementRoom(room.id);
+      refreshAvailability();
       message.success("Booking confirmed!");
       bookForm.resetFields();
     } catch (err) {
@@ -661,11 +638,7 @@ const BookingModal = ({ open, onClose, preRoom = null, createdBy = 'website' }) 
           initial="hidden"
           animate="visible"
           exit="exit"
-          onClick={(e) => {
-            if (e.target === e.currentTarget && !availPickerOpen && !bookPickerOpen) {
-              handleClose();
-            }
-          }}
+          onClick={(e) => { if (e.target === e.currentTarget) handleClose(); }}
           role="dialog"
           aria-modal="true"
           aria-label="Booking modal"
@@ -738,18 +711,6 @@ const BookingModal = ({ open, onClose, preRoom = null, createdBy = 'website' }) 
                         disabledDate={disabledDate}
                         style={{ width: "100%", borderRadius: 10 }}
                         popupClassName="sv-bk-picker-popup"
-                        open={availPickerOpen}
-                        onOpenChange={(op) => setAvailPickerOpen(op)}
-                        onCalendarChange={(dates) => {
-                          if (dates && dates[0] && dates[1]) {
-                            setTimeout(() => setAvailPickerOpen(false), 250);
-                          }
-                        }}
-                        onChange={(dates) => {
-                          if (dates && dates[0] && dates[1]) {
-                            setAvailPickerOpen(false);
-                          }
-                        }}
                       />
                     </Form.Item>
 
@@ -876,18 +837,6 @@ const BookingModal = ({ open, onClose, preRoom = null, createdBy = 'website' }) 
                             disabledDate={disabledDate}
                             style={{ width: "100%", borderRadius: 10 }}
                             popupClassName="sv-bk-picker-popup"
-                            open={bookPickerOpen}
-                            onOpenChange={(op) => setBookPickerOpen(op)}
-                            onCalendarChange={(dates) => {
-                              if (dates && dates[0] && dates[1]) {
-                                setTimeout(() => setBookPickerOpen(false), 250);
-                              }
-                            }}
-                            onChange={(dates) => {
-                              if (dates && dates[0] && dates[1]) {
-                                setBookPickerOpen(false);
-                              }
-                            }}
                           />
                         </Form.Item>
 

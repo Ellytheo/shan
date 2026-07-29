@@ -646,7 +646,7 @@ const AdminPage = () => {
 
   const getHeaderAction = () => {
     const refreshBtn = (
-      <Button onClick={fetchData} loading={loading} icon={<i className="bi bi-arrow-clockwise" />}>
+      <Button onClick={() => fetchData(false)} loading={loading} icon={<i className="bi bi-arrow-clockwise" />}>
         Refresh
       </Button>
     );
@@ -673,7 +673,7 @@ const AdminPage = () => {
         ) : null;
       case 'audit-logs':
         return (
-          <Button onClick={fetchAuditLogs} loading={auditLoading} icon={<i className="bi bi-arrow-clockwise" />}>
+          <Button onClick={() => fetchAuditLogs()} loading={auditLoading} icon={<i className="bi bi-arrow-clockwise" />}>
             Refresh
           </Button>
         );
