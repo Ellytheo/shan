@@ -84,7 +84,7 @@ const MODAL_CSS = `
 
   .sv-bk-modal {
     position: relative;
-    width: min(92vw, 760px);
+    width: min(calc(100vw - 32px), 760px);
     max-height: 90vh;
     overflow-y: auto;
     background: linear-gradient(160deg, #FFF8EE 0%, #FAF5EF 100%);
@@ -438,7 +438,7 @@ const MODAL_CSS = `
   }
 
   @media (max-width: 480px) {
-    .sv-bk-overlay { padding: 10px; }
+    .sv-bk-overlay { padding: 16px; }
     .sv-bk-body { padding: 20px 18px 28px; }
   }
 `;
