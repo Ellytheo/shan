@@ -507,6 +507,10 @@ const BookingModal = ({ open, onClose, preRoom = null, createdBy = 'website' }) 
   const [bookingLoading, setBookingLoading] = useState(false);
   const [bookingRef,   setBookingRef]     = useState("");
 
+  /* ── picker popup open control (auto-hides on date selection) ── */
+  const [availPickerOpen, setAvailPickerOpen] = useState(undefined);
+  const [bookPickerOpen,  setBookPickerOpen]  = useState(undefined);
+
   /* ── derive active room synchronously (no useEffect race) ── */
   // In direct mode preRoom is always the room; in general mode it's whatever
   // the user picked from the availability grid.
@@ -624,9 +628,8 @@ const BookingModal = ({ open, onClose, preRoom = null, createdBy = 'website' }) 
 
       const resp = await api.post(`${API_URL}/create_booking`, payload);
       setBookingRef(resp.data.booking_reference || "CONF-" + Date.now());
-      // Optimistic local decrement + re-fetch from DB so badges survive a refresh
+      // Optimistic local decrement
       decrementRoom(room.id);
-      refreshAvailability();
       message.success("Booking confirmed!");
       bookForm.resetFields();
     } catch (err) {
@@ -731,6 +734,13 @@ const BookingModal = ({ open, onClose, preRoom = null, createdBy = 'website' }) 
                         disabledDate={disabledDate}
                         style={{ width: "100%", borderRadius: 10 }}
                         popupClassName="sv-bk-picker-popup"
+                        open={availPickerOpen}
+                        onOpenChange={(op) => setAvailPickerOpen(op)}
+                        onChange={(dates) => {
+                          if (dates && dates[0] && dates[1]) {
+                            setAvailPickerOpen(false);
+                          }
+                        }}
                       />
                     </Form.Item>
 
@@ -857,6 +867,13 @@ const BookingModal = ({ open, onClose, preRoom = null, createdBy = 'website' }) 
                             disabledDate={disabledDate}
                             style={{ width: "100%", borderRadius: 10 }}
                             popupClassName="sv-bk-picker-popup"
+                            open={bookPickerOpen}
+                            onOpenChange={(op) => setBookPickerOpen(op)}
+                            onChange={(dates) => {
+                              if (dates && dates[0] && dates[1]) {
+                                setBookPickerOpen(false);
+                              }
+                            }}
                           />
                         </Form.Item>
 
