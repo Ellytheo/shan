@@ -73,9 +73,9 @@ const MODAL_CSS = `
     inset: 0;
     z-index: 2000;
     display: flex;
-    align-items: center;
+    align-items: flex-start;
     justify-content: center;
-    padding: 16px;
+    padding: clamp(24px, 4vh, 48px) 16px 24px;
     background: rgba(0, 0, 0, 0.65);
     backdrop-filter: blur(6px);
     -webkit-backdrop-filter: blur(6px);
