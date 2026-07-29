@@ -661,7 +661,11 @@ const BookingModal = ({ open, onClose, preRoom = null, createdBy = 'website' }) 
           initial="hidden"
           animate="visible"
           exit="exit"
-          onClick={(e) => { if (e.target === e.currentTarget) handleClose(); }}
+          onClick={(e) => {
+            if (e.target === e.currentTarget && !availPickerOpen && !bookPickerOpen) {
+              handleClose();
+            }
+          }}
           role="dialog"
           aria-modal="true"
           aria-label="Booking modal"
@@ -736,6 +740,11 @@ const BookingModal = ({ open, onClose, preRoom = null, createdBy = 'website' }) 
                         popupClassName="sv-bk-picker-popup"
                         open={availPickerOpen}
                         onOpenChange={(op) => setAvailPickerOpen(op)}
+                        onCalendarChange={(dates) => {
+                          if (dates && dates[0] && dates[1]) {
+                            setTimeout(() => setAvailPickerOpen(false), 250);
+                          }
+                        }}
                         onChange={(dates) => {
                           if (dates && dates[0] && dates[1]) {
                             setAvailPickerOpen(false);
@@ -869,6 +878,11 @@ const BookingModal = ({ open, onClose, preRoom = null, createdBy = 'website' }) 
                             popupClassName="sv-bk-picker-popup"
                             open={bookPickerOpen}
                             onOpenChange={(op) => setBookPickerOpen(op)}
+                            onCalendarChange={(dates) => {
+                              if (dates && dates[0] && dates[1]) {
+                                setTimeout(() => setBookPickerOpen(false), 250);
+                              }
+                            }}
                             onChange={(dates) => {
                               if (dates && dates[0] && dates[1]) {
                                 setBookPickerOpen(false);
