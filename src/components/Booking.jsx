@@ -251,23 +251,36 @@ const MODAL_CSS = `
   }
 
   /* ── Responsive RangePicker dropdown ────────────────────────────────────
-     Ant Design renders two side-by-side calendar panels by default.
-     On small screens we collapse them to a single stacked layout. */
+     On small screens: center the popup in the viewport (mirrors the parent
+     modal), stack the two calendar panels vertically, and shrink cells. */
   @media (max-width: 600px) {
+    /* ── Center the popup in the viewport like the parent modal ── */
+    .sv-bk-picker-popup {
+      position: fixed !important;
+      top: 50% !important;
+      left: 50% !important;
+      transform: translate(-50%, -50%) !important;
+      width: calc(100vw - 32px) !important;
+      max-width: 420px !important;
+      animation: svPickerFadeIn 0.2s ease !important;
+    }
+    @keyframes svPickerFadeIn {
+      from { opacity: 0; transform: translate(-50%, -48%); }
+      to   { opacity: 1; transform: translate(-50%, -50%); }
+    }
     .sv-bk-picker-popup .ant-picker-panel-container {
       width: 100% !important;
-      max-width: calc(100vw - 32px) !important;
+      max-width: 100% !important;
       overflow-x: hidden !important;
+      border-radius: 16px !important;
+      box-shadow: 0 24px 60px rgba(0,0,0,0.35) !important;
     }
     /* Stack the two panels vertically instead of side-by-side */
     .sv-bk-picker-popup .ant-picker-panels {
       flex-direction: column !important;
     }
     /* Each panel fills the container */
-    .sv-bk-picker-popup .ant-picker-panel {
-      width: 100% !important;
-    }
-    /* Make the header and table fit */
+    .sv-bk-picker-popup .ant-picker-panel,
     .sv-bk-picker-popup .ant-picker-date-panel,
     .sv-bk-picker-popup .ant-picker-month-panel,
     .sv-bk-picker-popup .ant-picker-year-panel {
@@ -289,7 +302,7 @@ const MODAL_CSS = `
     .sv-bk-picker-popup .ant-picker-header-view button {
       font-size: 0.85rem !important;
     }
-    /* Hide the second panel's prev/next arrows to avoid duplication */
+    /* Hide duplicate nav arrows when panels are stacked */
     .sv-bk-picker-popup .ant-picker-panel:nth-child(2) .ant-picker-header-prev-btn,
     .sv-bk-picker-popup .ant-picker-panel:nth-child(2) .ant-picker-header-super-prev-btn {
       visibility: hidden !important;
@@ -298,9 +311,16 @@ const MODAL_CSS = `
     .sv-bk-picker-popup .ant-picker-panel:nth-child(1) .ant-picker-header-super-next-btn {
       visibility: hidden !important;
     }
+    /* Range footer bar */
+    .sv-bk-picker-popup .ant-picker-footer {
+      border-radius: 0 0 16px 16px !important;
+    }
   }
 
   @media (max-width: 400px) {
+    .sv-bk-picker-popup {
+      width: calc(100vw - 24px) !important;
+    }
     .sv-bk-picker-popup .ant-picker-cell-inner {
       min-width: 24px !important;
       height: 24px !important;
