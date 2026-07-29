@@ -8,6 +8,24 @@ const api = axios.create({
 });
 
 // ----------------------------------------------------
+// Request interceptor: attach CSRF token (double-submit cookie pattern)
+// Flask-JWT-Extended sets a readable `csrf_access_token` cookie on login.
+// We must forward it as X-CSRF-TOKEN on every mutating request.
+// ----------------------------------------------------
+api.interceptors.request.use((config) => {
+  const csrfToken = document.cookie
+    .split('; ')
+    .find(row => row.startsWith('csrf_access_token='))
+    ?.split('=')[1];
+
+  if (csrfToken) {
+    config.headers['X-CSRF-TOKEN'] = csrfToken;
+  }
+  return config;
+});
+
+
+// ----------------------------------------------------
 // Response interceptor: handle 401 / 403 / 429 / auto-refresh
 // ----------------------------------------------------
 let isRefreshing = false;
