@@ -250,6 +250,68 @@ const MODAL_CSS = `
     z-index: 2500 !important;
   }
 
+  /* ── Responsive RangePicker dropdown ────────────────────────────────────
+     Ant Design renders two side-by-side calendar panels by default.
+     On small screens we collapse them to a single stacked layout. */
+  @media (max-width: 600px) {
+    .sv-bk-picker-popup .ant-picker-panel-container {
+      width: 100% !important;
+      max-width: calc(100vw - 32px) !important;
+      overflow-x: hidden !important;
+    }
+    /* Stack the two panels vertically instead of side-by-side */
+    .sv-bk-picker-popup .ant-picker-panels {
+      flex-direction: column !important;
+    }
+    /* Each panel fills the container */
+    .sv-bk-picker-popup .ant-picker-panel {
+      width: 100% !important;
+    }
+    /* Make the header and table fit */
+    .sv-bk-picker-popup .ant-picker-date-panel,
+    .sv-bk-picker-popup .ant-picker-month-panel,
+    .sv-bk-picker-popup .ant-picker-year-panel {
+      width: 100% !important;
+    }
+    .sv-bk-picker-popup .ant-picker-content {
+      width: 100% !important;
+    }
+    /* Shrink cells so they fit on narrow viewports */
+    .sv-bk-picker-popup .ant-picker-cell {
+      padding: 2px 0 !important;
+    }
+    .sv-bk-picker-popup .ant-picker-cell-inner {
+      min-width: 28px !important;
+      height: 28px !important;
+      line-height: 28px !important;
+      font-size: 0.78rem !important;
+    }
+    .sv-bk-picker-popup .ant-picker-header-view button {
+      font-size: 0.85rem !important;
+    }
+    /* Hide the second panel's prev/next arrows to avoid duplication */
+    .sv-bk-picker-popup .ant-picker-panel:nth-child(2) .ant-picker-header-prev-btn,
+    .sv-bk-picker-popup .ant-picker-panel:nth-child(2) .ant-picker-header-super-prev-btn {
+      visibility: hidden !important;
+    }
+    .sv-bk-picker-popup .ant-picker-panel:nth-child(1) .ant-picker-header-next-btn,
+    .sv-bk-picker-popup .ant-picker-panel:nth-child(1) .ant-picker-header-super-next-btn {
+      visibility: hidden !important;
+    }
+  }
+
+  @media (max-width: 400px) {
+    .sv-bk-picker-popup .ant-picker-cell-inner {
+      min-width: 24px !important;
+      height: 24px !important;
+      line-height: 24px !important;
+      font-size: 0.72rem !important;
+    }
+    .sv-bk-picker-popup .ant-picker-header {
+      padding: 4px 2px !important;
+    }
+  }
+
   .sv-bk-submit-btn {
     width: 100%;
     height: 50px;
@@ -648,6 +710,7 @@ const BookingModal = ({ open, onClose, preRoom = null, createdBy = 'website' }) 
                         size="large"
                         disabledDate={disabledDate}
                         style={{ width: "100%", borderRadius: 10 }}
+                        popupClassName="sv-bk-picker-popup"
                       />
                     </Form.Item>
 
@@ -773,6 +836,7 @@ const BookingModal = ({ open, onClose, preRoom = null, createdBy = 'website' }) 
                             size="large"
                             disabledDate={disabledDate}
                             style={{ width: "100%", borderRadius: 10 }}
+                            popupClassName="sv-bk-picker-popup"
                           />
                         </Form.Item>
 
