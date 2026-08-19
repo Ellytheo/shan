@@ -11,7 +11,7 @@ import dayjs from 'dayjs';
 import isBetween from 'dayjs/plugin/isBetween';
 import BookingModal from '../components/Booking';
 import './AdminPage.css';
-import { BookingCard, UserCard, AuditLogCard, InquiryCard } from './MobileCards';
+import { BookingCard, UserCard, InquiryCard } from './MobileCards';
 
 /* ── responsive breakpoint hook ── */
 function useWindowWidth() {
@@ -149,16 +149,6 @@ const AdminPage = () => {
   /* settings */
   const [settingsForm] = Form.useForm();
 
-  /* audit logs */
-  const [auditLogs, setAuditLogs]         = useState([]);
-  const [auditTotal, setAuditTotal]       = useState(0);
-  const [auditPage, setAuditPage]         = useState(1);
-  const [auditSearch, setAuditSearch]     = useState('');
-  const [auditTempSearch, setAuditTempSearch] = useState('');
-  const [auditAction, setAuditAction]     = useState('');
-  const [auditActions, setAuditActions]   = useState([]);
-  const [auditLoading, setAuditLoading]   = useState(false);
-
   /* upload & gallery state */
   const [uploadingImage, setUploadingImage] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
@@ -190,7 +180,7 @@ const AdminPage = () => {
 
   /* ── sync active view to localstorage & guard restricted views ── */
   useEffect(() => {
-    const adminOnlyViews = ['reports', 'users', 'audit-logs', 'settings'];
+    const adminOnlyViews = ['reports', 'users', 'settings'];
     if (!isAdmin && adminOnlyViews.includes(view)) {
       setTimeout(() => setView('dashboard'), 0);
       return;
@@ -265,53 +255,10 @@ const AdminPage = () => {
     }
   }, [settingsForm]);
 
-  // ProtectedRoute already guards this page; just fetch data on mount
+    // ProtectedRoute already guards this page; just fetch data on mount
   useEffect(() => {
     setTimeout(() => fetchData(true), 0);
   }, [fetchData]);
-
-  const fetchAuditLogs = useCallback(async () => {
-    setAuditLoading(true);
-    try {
-      const params = {
-        page: auditPage,
-        limit: 20,
-        ...(auditSearch && { search: auditSearch }),
-        ...(auditAction && { action: auditAction }),
-      };
-
-      const logsRes = await api.get('/api/audit-logs', { params });
-
-      if (logsRes.data.status === 'success') {
-        const logs = logsRes.data.logs || [];
-        setAuditLogs(logs);
-        setAuditTotal(logsRes.data.total || 0);
-        setAuditActions(Array.from(new Set(logs.map((log) => log.action).filter(Boolean))));
-      } else {
-        setAuditLogs([]);
-        setAuditTotal(0);
-        setAuditActions([]);
-      }
-    } catch (error) {
-      if (import.meta.env.DEV) console.error('[auditLogs]', error);
-      setAuditLogs([]);
-      setAuditTotal(0);
-      setAuditActions([]);
-      message.error('Failed to load audit logs.');
-    } finally {
-      setAuditLoading(false);
-    }
-  }, [auditPage, auditSearch, auditAction]);
-
-  useEffect(() => {
-    if (view !== 'audit-logs') return;
-
-    const timeoutId = window.setTimeout(() => {
-      void fetchAuditLogs();
-    }, 0);
-
-    return () => window.clearTimeout(timeoutId);
-  }, [view, fetchAuditLogs]);
 
   /* ── actions ── */
   const changeStatus = async (id, newStatus) => {
@@ -611,7 +558,6 @@ const AdminPage = () => {
       case 'inquiries': return 'Guest Inquiries';
       case 'reports': return 'Reports';
       case 'users': return 'Users';
-      case 'audit-logs': return 'Audit Logs';
       case 'settings': return 'Settings';
       default: return 'Admin Console';
     }
@@ -635,8 +581,6 @@ const AdminPage = () => {
         return 'Operational summaries and performance indicators.';
       case 'users':
         return 'Manage staff accounts and access permissions.';
-      case 'audit-logs':
-        return 'Full record of all admin actions and system events.';
       case 'settings':
         return 'Resort configuration and operating parameters.';
       default:
@@ -671,12 +615,6 @@ const AdminPage = () => {
             <i className="bi bi-person-plus" style={{ marginRight: 6 }} /> Add User
           </Button>
         ) : null;
-      case 'audit-logs':
-        return (
-          <Button onClick={() => fetchAuditLogs()} loading={auditLoading} icon={<i className="bi bi-arrow-clockwise" />}>
-            Refresh
-          </Button>
-        );
       default:
         return null;
     }
@@ -766,7 +704,6 @@ const AdminPage = () => {
     { id:'inquiries',  icon:'bi-envelope',        label:'Inquiries',  adminOnly: false },
     { id:'reports',    icon:'bi-graph-up-arrow',  label:'Reports',    adminOnly: true  },
     { id:'users',      icon:'bi-people',          label:'Users',      adminOnly: true  },
-    { id:'audit-logs', icon:'bi-clock-history',   label:'Audit Logs', adminOnly: true  },
     { id:'settings',   icon:'bi-gear',            label:'Settings',   adminOnly: true  },
   ];
   const navItems = ALL_NAV_ITEMS.filter(n => !n.adminOnly || isAdmin);
@@ -1406,108 +1343,6 @@ const AdminPage = () => {
                   <Button type="primary" htmlType="submit" className="btn-danger" style={{height:44}}>Save Settings</Button>
                 </Form>
               </Card>
-            </motion.div>
-          )}
-
-          {/* ── AUDIT LOGS ── */}
-          {isAdmin && view === 'audit-logs' && (
-            <motion.div key="audit" className="view-wrap" initial={{opacity:0,y:12}} animate={{opacity:1,y:0}} exit={{opacity:0}} transition={{duration:0.3}}>
-              {/* Audit filter toolbar */}
-              <div className="audit-filter-bar">
-                <div style={{display:'flex',gap:16,flexWrap:'wrap',alignItems:'center',width:'100%'}}>
-                  <div style={{ display: 'flex', gap: 8 }}>
-                    <Input
-                      className="custom-search-input"
-                      placeholder="Search user, target, description…"
-                      allowClear
-                      value={auditTempSearch}
-                      onChange={e => setAuditTempSearch(e.target.value)}
-                      onPressEnter={() => { setAuditSearch(auditTempSearch); setAuditPage(1); }}
-                      style={{ width: 300 }}
-                    />
-                    <Button type="primary" className="btn-blue" icon={<i className="bi bi-search" />} onClick={() => { setAuditSearch(auditTempSearch); setAuditPage(1); }} />
-                  </div>
-                  <Select
-                    placeholder="Filter by action"
-                    allowClear
-                    style={{width:180}}
-                    value={auditAction || undefined}
-                    onChange={val => { setAuditAction(val || ''); setAuditPage(1); }}
-                  >
-                    {auditActions.map(a => (
-                      <Select.Option key={a} value={a}>{a}</Select.Option>
-                    ))}
-                  </Select>
-                </div>
-              </div>
-
-              {/* Desktop table */}
-              {!isMobile && (
-                <Card className="admin-card-style sv-table-only">
-                  <Table
-                    dataSource={auditLogs}
-                    rowKey="id"
-                    loading={auditLoading}
-                    size="middle"
-                    className="sv-admin-table"
-                    pagination={{
-                      current: auditPage,
-                      pageSize: 20,
-                      total: auditTotal,
-                      showSizeChanger: false,
-                      onChange: (pg) => setAuditPage(pg)
-                    }}
-                    columns={[
-                      { title:'Time', dataIndex:'created_at', key:'t', width:160,
-                        render: v => dayjs(v).format('DD MMM YY HH:mm')
-                      },
-                      { title:'Admin', dataIndex:'admin_username', key:'a', width:120 },
-                      { title:'Action', dataIndex:'action', key:'ac', width:140,
-                        render: v => <Tag color="#C5A880">{v}</Tag>
-                      },
-                      { title:'Target', dataIndex:'target_type', key:'tt', width:110 },
-                      { title:'Name', dataIndex:'target_name', key:'tn' },
-                      { title:'Description', dataIndex:'description', key:'d',
-                        render: v => <span style={{fontSize:'0.82rem',color:'var(--text-muted)'}}>{v || '—'}</span>
-                      },
-                    ]}
-                  />
-                </Card>
-              )}
-
-              {/* Mobile cards */}
-              {isMobile && (
-                <div className="mc-card-list mc-mobile-only">
-                  {auditLoading && <div className="center-spin"><Spin /></div>}
-                  {!auditLoading && auditLogs.length === 0 && (
-                    <div className="mc-empty">
-                      <i className="bi bi-clock-history" />
-                      <div className="mc-empty-text">No audit logs found.</div>
-                    </div>
-                  )}
-                  {!auditLoading && auditLogs.map(log => (
-                    <AuditLogCard key={log.id} log={log} />
-                  ))}
-                  {/* Mobile pagination */}
-                  {auditTotal > 20 && (
-                    <div className="mc-pagination">
-                      <Button
-                        disabled={auditPage <= 1}
-                        onClick={() => setAuditPage(p => Math.max(1, p - 1))}
-                        style={{ marginRight: 8 }}
-                      >← Prev</Button>
-                      <span style={{ padding: '0 12px', lineHeight: '32px', fontSize: '0.85rem', color: '#78716C' }}>
-                        Page {auditPage} / {Math.ceil(auditTotal / 20)}
-                      </span>
-                      <Button
-                        disabled={auditPage >= Math.ceil(auditTotal / 20)}
-                        onClick={() => setAuditPage(p => p + 1)}
-                        style={{ marginLeft: 8 }}
-                      >Next →</Button>
-                    </div>
-                  )}
-                </div>
-              )}
             </motion.div>
           )}
 

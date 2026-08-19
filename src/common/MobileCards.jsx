@@ -166,38 +166,6 @@ export function UserCard({ user, onEdit, onResetPwd, onToggleStatus, onDelete, l
 }
 
 /* ═══════════════════════════════════════════════════
-   AUDIT LOG CARD
-   ═══════════════════════════════════════════════════ */
-export function AuditLogCard({ log }) {
-  return (
-    <div className="mc-card mc-card--compact">
-      <div className="mc-card-head" style={{ alignItems: 'flex-start' }}>
-        <div>
-          <ActionBadge action={log.action} />
-          <div className="mc-card-name" style={{ marginTop: 6, fontSize: '0.9rem' }}>
-            {log.target_name || log.target_type || '—'}
-          </div>
-        </div>
-        <div style={{ textAlign: 'right', flexShrink: 0 }}>
-          <div style={{ fontSize: '0.75rem', color: '#1C1917', fontWeight: 700 }}>
-            {log.admin_username || '—'}
-          </div>
-          <div style={{ fontSize: '0.68rem', color: '#A8A29E', marginTop: 2 }}>
-            {log.created_at ? dayjs(log.created_at).format('DD MMM YY HH:mm') : '—'}
-          </div>
-        </div>
-      </div>
-      <div className="mc-card-grid" style={{ gridTemplateColumns: '1fr 1fr', marginTop: 8 }}>
-        <CardField label="Target" value={log.target_type} />
-      </div>
-      {log.description && (
-        <div className="mc-log-desc">{log.description}</div>
-      )}
-    </div>
-  );
-}
-
-/* ═══════════════════════════════════════════════════
    INQUIRY CARD
    ═══════════════════════════════════════════════════ */
 export function InquiryCard({ contact, isRead, onRead, onDelete }) {
