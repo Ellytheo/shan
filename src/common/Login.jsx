@@ -19,6 +19,7 @@ const Login = () => {
 
       if (result.ok) {
         message.success('Welcome back!');
+        localStorage.removeItem('adminActiveView');
         navigate('/wp-adman', { replace: true });
       }
     } catch (err) {
