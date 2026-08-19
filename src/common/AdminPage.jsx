@@ -118,6 +118,7 @@ const AdminPage = () => {
 
   const [userOpen, setUserOpen]         = useState(false);
   const [userForm] = Form.useForm();
+  const typedPassword = Form.useWatch('password', userForm) || '';
 
   /* edit user */
   const [editUserTarget, setEditUserTarget] = useState(null);
@@ -1596,17 +1597,63 @@ const AdminPage = () => {
       </Modal>
 
       {/* ── CREATE USER MODAL ── */}
-      <Modal title="Add Staff Account" open={userOpen} onCancel={()=>{ setUserOpen(false); userForm.resetFields(); }} footer={null} destroyOnClose width={420}>
+      <Modal title="Add Staff Account" open={userOpen} onCancel={()=>{ setUserOpen(false); userForm.resetFields(); }} footer={null} destroyOnClose width={440}>
         <Form layout="vertical" form={userForm} onFinish={createUser}>
-          <Form.Item label="Username" name="username" rules={[{required:true}]}><Input /></Form.Item>
-          <Form.Item label="Password" name="password" rules={[{required:true}]}><Input.Password className="better-pwd-input" size="large" visibilityToggle={{ visible: undefined, onVisibleChange: undefined }} /></Form.Item>
-          <Form.Item label="Role" name="role" rules={[{required:true}]}>
-            <Select>
+          <Form.Item label="Username" name="username" rules={[{required:true, message:'Username is required'}]}><Input size="large" placeholder="Enter username" /></Form.Item>
+          <Form.Item
+            label="Password"
+            name="password"
+            rules={[
+              { required: true, message: 'Password is required' },
+              {
+                validator(_, value) {
+                  if (!value) return Promise.resolve();
+                  const minLen = value.length >= 12;
+                  const upper = /[A-Z]/.test(value);
+                  const lower = /[a-z]/.test(value);
+                  const num = /[0-9]/.test(value);
+                  const spec = /[^A-Za-z0-9]/.test(value);
+                  if (minLen && upper && lower && num && spec) {
+                    return Promise.resolve();
+                  }
+                  return Promise.reject(new Error('Password does not satisfy all policy requirements below'));
+                }
+              }
+            ]}
+          >
+            <Input.Password className="better-pwd-input" size="large" placeholder="Enter a secure password" />
+          </Form.Item>
+
+          {/* Live Password Policy Requirements Checklist */}
+          <div className="pwd-policy-container">
+            <div className="pwd-policy-title">Password Requirements</div>
+            <div className="pwd-policy-list">
+              <div className={`pwd-policy-item ${typedPassword.length >= 12 ? 'pwd-policy-item--met' : ''}`}>
+                <i className={`bi ${typedPassword.length >= 12 ? 'bi-check-circle-fill' : 'bi-circle'}`} />
+                <span>At least 12 characters ({typedPassword.length}/12)</span>
+              </div>
+              <div className={`pwd-policy-item ${/[A-Z]/.test(typedPassword) && /[a-z]/.test(typedPassword) ? 'pwd-policy-item--met' : ''}`}>
+                <i className={`bi ${/[A-Z]/.test(typedPassword) && /[a-z]/.test(typedPassword) ? 'bi-check-circle-fill' : 'bi-circle'}`} />
+                <span>Uppercase &amp; lowercase letters (A-Z, a-z)</span>
+              </div>
+              <div className={`pwd-policy-item ${/[0-9]/.test(typedPassword) ? 'pwd-policy-item--met' : ''}`}>
+                <i className={`bi ${/[0-9]/.test(typedPassword) ? 'bi-check-circle-fill' : 'bi-circle'}`} />
+                <span>At least one number (0-9)</span>
+              </div>
+              <div className={`pwd-policy-item ${/[^A-Za-z0-9]/.test(typedPassword) ? 'pwd-policy-item--met' : ''}`}>
+                <i className={`bi ${/[^A-Za-z0-9]/.test(typedPassword) ? 'bi-check-circle-fill' : 'bi-circle'}`} />
+                <span>At least one special character (!@#$%^&*)</span>
+              </div>
+            </div>
+          </div>
+
+          <Form.Item label="Role" name="role" rules={[{required:true, message:'Please select a role'}]}>
+            <Select size="large" placeholder="Select role">
               <Select.Option value="Admin">Admin</Select.Option>
               <Select.Option value="Receptionist">Receptionist</Select.Option>
             </Select>
           </Form.Item>
-          <Button type="primary" htmlType="submit" block className="btn-blue" style={{height:44}}>Register Account</Button>
+          <Button type="primary" htmlType="submit" block className="btn-blue" style={{height:44, marginTop: 8}}>Register Account</Button>
         </Form>
       </Modal>
 

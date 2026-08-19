@@ -1716,3 +1716,55 @@ html {
 .sv-admin-table {
   overflow-x: auto;
 }
+
+/* ═══════════════════════════════════════════════════
+   Password Policy Checklist Component
+   ═══════════════════════════════════════════════════ */
+.pwd-policy-container {
+  background: #FAF8F5;
+  border: 1px solid rgba(197, 168, 128, 0.3);
+  border-radius: 12px;
+  padding: 12px 14px;
+  margin-top: 4px;
+  margin-bottom: 20px;
+  transition: all 0.25s ease;
+}
+
+.pwd-policy-title {
+  font-size: 0.76rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #78716C;
+  margin-bottom: 8px;
+}
+
+.pwd-policy-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.pwd-policy-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.82rem;
+  color: #78716C;
+  transition: color 0.2s ease, transform 0.2s ease;
+}
+
+.pwd-policy-item i {
+  font-size: 0.85rem;
+  color: #A8A29E;
+  transition: color 0.2s ease;
+}
+
+.pwd-policy-item--met {
+  color: #0F8F46;
+  font-weight: 600;
+}
+
+.pwd-policy-item--met i {
+  color: #0F8F46;
+}
