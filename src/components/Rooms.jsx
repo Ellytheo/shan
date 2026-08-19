@@ -281,22 +281,22 @@ const RoomModal = ({ room, visible, onClose, liveCount }) => {
               borderRadius: 24,
               background: 'linear-gradient(160deg, #f4f7fb 0%, #eef2f7 100%)',
               boxShadow: '0 40px 80px rgba(0,0,0,0.35)',
-              overflow: 'hidden'
             }}
+            className="shanvilla-room-modal-card"
           >
             {/* Hero Image */}
-            <div style={{ position: 'relative', height: 'clamp(200px, 40vw, 340px)', overflow: 'hidden' }}>
+            <div className="shanvilla-room-modal-hero" style={{ position: 'relative', height: 'clamp(180px, 35vw, 340px)', overflow: 'hidden' }}>
               <img
                 src={room.image}
                 alt={room.name}
                 style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
               />
               <div style={styles.modalHeroOverlay} />
-              <div style={{ position: 'absolute', bottom: 24, left: 28 }}>
+              <div className="shanvilla-room-hero-text" style={{ position: 'absolute', bottom: 20, left: 24, right: 24 }}>
                 <div style={styles.modalRoomBadge}>
                   <AvailabilityBadge count={liveCount} />
                 </div>
-                <h2 style={styles.modalTitle}>{room.name}</h2>
+                <h2 className="shanvilla-room-modal-title" style={styles.modalTitle}>{room.name}</h2>
                 <div style={{ display: 'flex', alignItems: 'baseline', gap: 6 }}>
                   <span style={{ color: '#D4AF37', fontSize: '1.45rem', fontWeight: 700 }}>
                     KES {room.startingPrice.toLocaleString()}
@@ -307,12 +307,12 @@ const RoomModal = ({ room, visible, onClose, liveCount }) => {
             </div>
 
             {/* Body */}
-            <div style={{ padding: 'clamp(20px, 4vw, 36px)' }}>
+            <div className="shanvilla-room-modal-body" style={{ padding: 'clamp(16px, 4vw, 36px)' }}>
               <p style={styles.modalDesc}>{room.description}</p>
 
               {/* Amenities */}
               <h4 style={styles.modalSubtitle}>Amenities</h4>
-              <div style={styles.modalAmenityGrid}>
+              <div className="shanvilla-amenity-grid" style={styles.modalAmenityGrid}>
                 {room.amenities.map((a, i) => (
                   <motion.div
                     key={i}
@@ -330,7 +330,7 @@ const RoomModal = ({ room, visible, onClose, liveCount }) => {
 
               {/* Pricing */}
               <h4 style={{ ...styles.modalSubtitle, marginTop: 28 }}>Pricing Plans</h4>
-              <div style={styles.modalPricingGrid}>
+              <div className="shanvilla-pricing-grid" style={styles.modalPricingGrid}>
                 {Object.entries(room.pricing).map(([plan, price]) => (
                   <div key={plan} style={styles.modalPricingCard}>
                     <span style={styles.modalPricingLabel}>{PLAN_LABELS[plan]}</span>
@@ -342,7 +342,7 @@ const RoomModal = ({ room, visible, onClose, liveCount }) => {
               {/* Actions */}
               <div style={{ display: 'flex', justifyContent: 'center', marginTop: 32, width: '100%' }}>
                 {soldOut ? (
-                  <div style={{ ...styles.modalBookBtn, background: '#ccc', cursor: 'not-allowed', opacity: 0.6, textAlign: 'center' }}>
+                  <div className="shanvilla-modal-book-btn" style={{ ...styles.modalBookBtn, background: '#ccc', cursor: 'not-allowed', opacity: 0.6, textAlign: 'center' }}>
                     No Rooms Available
                   </div>
                 ) : (
@@ -353,6 +353,7 @@ const RoomModal = ({ room, visible, onClose, liveCount }) => {
                       boxShadow: '0 10px 30px rgba(197,48,48,0.45)',
                     }}
                     whileTap={{ scale: 0.97 }}
+                    className="shanvilla-modal-book-btn"
                     style={styles.modalBookBtn}
                     onClick={() => {
                       onClose();
@@ -507,6 +508,23 @@ const Rooms = () => {
           padding: 0 !important;
           overflow: hidden;
         }
+        .shanvilla-room-modal-card {
+          max-height: 88vh;
+          overflow-y: auto !important;
+          scrollbar-width: thin;
+          scrollbar-color: #C6A355 transparent;
+          -webkit-overflow-scrolling: touch;
+        }
+        .shanvilla-room-modal-card::-webkit-scrollbar {
+          width: 6px;
+        }
+        .shanvilla-room-modal-card::-webkit-scrollbar-track {
+          background: transparent;
+        }
+        .shanvilla-room-modal-card::-webkit-scrollbar-thumb {
+          background: #C6A355;
+          border-radius: 3px;
+        }
         .shanvilla-room-modal .ant-modal-close {
           top: 14px !important;
           right: 14px !important;
@@ -519,7 +537,7 @@ const Rooms = () => {
           background: transparent !important;
         }
 
-        /* ── Mobile ── */
+        /* ── Mobile & Small Screen Adaptations ── */
         @media (max-width: 767px) {
           .shanvilla-room-modal .ant-modal-content {
             border-radius: 16px !important;
@@ -533,10 +551,37 @@ const Rooms = () => {
           }
         }
 
+        @media (max-width: 576px) {
+          .shanvilla-room-hero-text {
+            bottom: 14px !important;
+            left: 16px !important;
+            right: 16px !important;
+          }
+          .shanvilla-room-modal-title {
+            font-size: 1.3rem !important;
+            margin-bottom: 4px !important;
+          }
+          .shanvilla-amenity-grid {
+            grid-template-columns: repeat(2, 1fr) !important;
+            gap: 8px !important;
+          }
+          .shanvilla-pricing-grid {
+            grid-template-columns: 1fr !important;
+            gap: 8px !important;
+          }
+          .shanvilla-modal-book-btn {
+            max-width: 100% !important;
+            width: 100% !important;
+          }
+        }
+
         /* ── Very small screens ── */
         @media (max-width: 380px) {
           .shanvilla-room-modal .ant-modal-content {
-            border-radius: 12px !important;
+            border-radius: 14px !important;
+          }
+          .shanvilla-amenity-grid {
+            grid-template-columns: 1fr !important;
           }
         }
       `}</style>

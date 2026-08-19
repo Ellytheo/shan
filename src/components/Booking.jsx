@@ -250,14 +250,37 @@ const MODAL_CSS = `
     z-index: 2500 !important;
   }
 
-  /* ── Responsive RangePicker dropdown ────────────────────────────────────
-     Ant Design renders two side-by-side calendar panels by default.
-     On small screens we collapse them to a single stacked layout. */
+  @media (max-width: 768px) {
+    .sv-bk-modal .ant-input,
+    .sv-bk-modal .ant-picker,
+    .sv-bk-modal .ant-select-selector {
+      font-size: 16px !important;
+    }
+  }
+
+  /* ── Responsive RangePicker dropdown positioning & layout ────────────────── */
+  .sv-bk-picker-popup {
+    z-index: 2500 !important;
+  }
+
   @media (max-width: 600px) {
+    /* Center datepicker popup on mobile screens so it never overflows off-screen */
+    .sv-bk-picker-popup {
+      position: fixed !important;
+      left: 50% !important;
+      top: 50% !important;
+      transform: translate(-50%, -50%) !important;
+      width: calc(100vw - 24px) !important;
+      max-width: 350px !important;
+      margin: 0 !important;
+      box-shadow: 0 16px 48px rgba(0,0,0,0.35) !important;
+    }
+
     .sv-bk-picker-popup .ant-picker-panel-container {
       width: 100% !important;
-      max-width: calc(100vw - 32px) !important;
+      max-width: 100% !important;
       overflow-x: hidden !important;
+      border-radius: 16px !important;
     }
     /* Stack the two panels vertically instead of side-by-side */
     .sv-bk-picker-popup .ant-picker-panels {
@@ -278,13 +301,13 @@ const MODAL_CSS = `
     }
     /* Shrink cells so they fit on narrow viewports */
     .sv-bk-picker-popup .ant-picker-cell {
-      padding: 2px 0 !important;
+      padding: 3px 0 !important;
     }
     .sv-bk-picker-popup .ant-picker-cell-inner {
       min-width: 28px !important;
       height: 28px !important;
       line-height: 28px !important;
-      font-size: 0.78rem !important;
+      font-size: 0.82rem !important;
     }
     .sv-bk-picker-popup .ant-picker-header-view button {
       font-size: 0.85rem !important;
@@ -437,9 +460,45 @@ const MODAL_CSS = `
     color: #0F8F46;
   }
 
-  @media (max-width: 480px) {
-    .sv-bk-overlay { padding: 10px; }
-    .sv-bk-body { padding: 20px 18px 28px; }
+  @media (max-width: 576px) {
+    .sv-bk-overlay { padding: 8px !important; }
+    .sv-bk-modal {
+      width: 95vw !important;
+      max-height: 92vh !important;
+      border-radius: 18px !important;
+    }
+    .sv-bk-body { padding: 18px 14px 22px !important; }
+    .sv-bk-heading { font-size: 1.35rem !important; }
+    .sv-bk-close {
+      top: 10px !important;
+      right: 12px !important;
+      width: 34px !important;
+      height: 34px !important;
+    }
+    .sv-bk-room-hero {
+      height: 120px !important;
+      border-radius: 12px !important;
+    }
+    .sv-bk-room-hero-name { font-size: 1rem !important; }
+    .sv-bk-avail-grid {
+      grid-template-columns: 1fr !important;
+      gap: 12px !important;
+    }
+    .sv-bk-summary-card {
+      padding: 14px !important;
+      border-radius: 12px !important;
+    }
+    .sv-bk-summary-grid {
+      grid-template-columns: repeat(2, 1fr) !important;
+      gap: 10px !important;
+    }
+  }
+
+  @media (max-width: 380px) {
+    .sv-bk-body { padding: 16px 10px 18px !important; }
+    .sv-bk-summary-grid {
+      grid-template-columns: 1fr !important;
+    }
   }
 `;
 
@@ -711,6 +770,7 @@ const BookingModal = ({ open, onClose, preRoom = null, createdBy = 'website' }) 
                         disabledDate={disabledDate}
                         style={{ width: "100%", borderRadius: 10 }}
                         popupClassName="sv-bk-picker-popup"
+                        getPopupContainer={(trigger) => trigger.closest('.sv-bk-modal') || document.body}
                       />
                     </Form.Item>
 
@@ -837,6 +897,7 @@ const BookingModal = ({ open, onClose, preRoom = null, createdBy = 'website' }) 
                             disabledDate={disabledDate}
                             style={{ width: "100%", borderRadius: 10 }}
                             popupClassName="sv-bk-picker-popup"
+                            getPopupContainer={(trigger) => trigger.closest('.sv-bk-modal') || document.body}
                           />
                         </Form.Item>
 
