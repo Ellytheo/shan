@@ -19,43 +19,83 @@ import pic5 from "../images/pic5.jpg";
 import pic15 from "../images/pic15.jpg";
 import room1 from "../images/standard.webp";
 import room2 from "../images/vip.webp";
+import vipRoom from "../images/vip.jpg";
+
+/* ─── max guests per room type ─── */
+const ROOM_MAX_GUESTS = {
+  1: 2, // Standard
+  2: 2, // Deluxe
+  3: 3, // Superior Twin — only room that allows 3
+  4: 2, // Executive
+  5: 2, // VIP
+};
 
 const LOCAL_ROOMS = [
   {
     id: 1,
-    name: "Standard Single Room",
-    available: 6,
-    startingPrice: 5000,
+    name: "Standard Room",
+    available: 7,
+    startingPrice: 4000,
     description:
       "A well-appointed retreat offering modern comforts and elegant simplicity.",
     image: pic5,
+    pricing: {
+      single: { bedBreakfast: 4000, halfBoard: 5500, fullBoard: 6500 },
+      double: { bedBreakfast: 4700, halfBoard: 7200, fullBoard: 9500 },
+    },
   },
   {
     id: 2,
-    name: "Deluxe Single Room",
-    available: 5,
-    startingPrice: 5000,
+    name: "Deluxe Room",
+    available: 12,
+    startingPrice: 5200,
     description:
       "Elevated living with a private balcony and resort panoramas.",
     image: pic15,
+    pricing: {
+      single: { bedBreakfast: 5200, halfBoard: 6200, fullBoard: 7500 },
+      double: { bedBreakfast: 6000, halfBoard: 8500, fullBoard: 10500 },
+    },
   },
   {
     id: 3,
-    name: "Deluxe Twin Room",
-    available: 4,
-    startingPrice: 6000,
+    name: "Superior Twin Room",
+    available: 1,
+    startingPrice: 8500,
     description:
       "Spacious twin-bed luxury crafted for companions seeking shared comfort.",
     image: room1,
+    pricing: {
+      bedBreakfast: 8500,
+      halfBoard: 11000,
+      fullBoard: 13000,
+    },
   },
   {
     id: 4,
-    name: "Superior Single Room",
-    available: 6,
-    startingPrice: 8000,
+    name: "Executive Room",
+    available: 2,
+    startingPrice: 7000,
     description:
       "An exceptional sanctuary with luxury bedding and a premium mini bar.",
     image: room2,
+    pricing: {
+      single: { bedBreakfast: 7000, halfBoard: 8500, fullBoard: 9500 },
+      double: { bedBreakfast: 7700, halfBoard: 10000, fullBoard: 12000 },
+    },
+  },
+  {
+    id: 5,
+    name: "VIP Room",
+    available: 1,
+    startingPrice: 8000,
+    description:
+      "The ultimate in luxury and style with premium finishes and top-tier guest privileges.",
+    image: vipRoom,
+    pricing: {
+      single: { bedBreakfast: 8000, halfBoard: 9500, fullBoard: 10500 },
+      double: { bedBreakfast: 8700, halfBoard: 11000, fullBoard: 13500 },
+    },
   },
 ];
 
@@ -541,7 +581,8 @@ const BookingModal = ({ open, onClose, preRoom = null, createdBy = 'website' }) 
   /* ── state ── */
   const [availLoading, setAvailLoading]   = useState(false);
   const [availRooms,   setAvailRooms]     = useState([]);
-  const [searchData,   setSearchData]     = useState(null);   // dates + guests from step-1
+  const [mealPlan, setMealPlan] = useState('bedBreakfast');
+  const [searchData,   setSearchData]     = useState(null);
   const [selectedRoom, setSelectedRoom]   = useState(null);   // room picked from availability grid
   const [bookingLoading, setBookingLoading] = useState(false);
   const [bookingRef,   setBookingRef]     = useState("");
@@ -569,6 +610,7 @@ const BookingModal = ({ open, onClose, preRoom = null, createdBy = 'website' }) 
         setSearchData(null);
         setSelectedRoom(null);
         setBookingRef("");
+        setMealPlan('bedBreakfast');
         availForm.resetFields();
         bookForm.resetFields();
       }, 300);
@@ -592,11 +634,24 @@ const BookingModal = ({ open, onClose, preRoom = null, createdBy = 'website' }) 
     ? dayjs(checkoutVal).diff(dayjs(checkinVal), "day")
     : 0;
 
-  // calculate total price
-  const roomPricePerNight = bookingRoom
-    ? (bookingRoom.price || bookingRoom.startingPrice || 0)
-    : 0;
+  // calculate total price — use single/double occupancy rates where available
+  const guestCount = parseInt(guestsVal) || 2;
+  const getRoomRate = (room) => {
+    if (!room) return 0;
+    const p = room.pricing || room.price_details;
+    // Superior Twin uses flat pricing regardless of guest count
+    if (p && !p.single && !p.double) return p[mealPlan] || room.price || room.startingPrice || 0;
+    // All other rooms: 1 guest = single rate, 2+ guests = double rate
+    const tier = guestCount === 1 ? p?.single : p?.double;
+    return tier?.[mealPlan] || room.price || room.startingPrice || 0;
+  };
+  const roomPricePerNight = getRoomRate(bookingRoom);
   const totalPrice = nights * roomPricePerNight;
+  const occupancyLabel = (() => {
+    const p = bookingRoom?.pricing;
+    if (!p || (!p.single && !p.double)) return null; // flat / Superior Twin
+    return guestCount === 1 ? "Single occupancy" : "Double occupancy";
+  })();
 
   /* ── step-1: check availability ── */
   const handleCheckAvailability = async (values) => {
@@ -616,7 +671,14 @@ const BookingModal = ({ open, onClose, preRoom = null, createdBy = 'website' }) 
         const local = LOCAL_ROOMS.find(
           (r) => r.name.toLowerCase() === apiRoom.name?.toLowerCase() || r.id === apiRoom.id
         );
-        return { ...apiRoom, image: local?.image || null, description: local?.description || "" };
+        return {
+          ...apiRoom,
+          image: local?.image || null,
+          description: local?.description || "",
+          // API now returns these; fall back to local data if missing
+          pricing: apiRoom.pricing || local?.pricing || null,
+          max_guests: apiRoom.max_guests ?? local?.max_guests ?? 2,
+        };
       });
 
       if (merged.length === 0) {
@@ -658,6 +720,7 @@ const BookingModal = ({ open, onClose, preRoom = null, createdBy = 'website' }) 
         checkin_date: checkin,
         checkout_date: checkout,
         guests,
+        meal_plan: mealPlan,
         created_by: createdBy,
       };
 
@@ -781,9 +844,9 @@ const BookingModal = ({ open, onClose, preRoom = null, createdBy = 'website' }) 
                       rules={[{ required: true }]}
                     >
                       <Select size="large">
-                        {["1","2","3","4","5"].map((n) => (
+                        {["1","2","3"].map((n) => (
                           <Option key={n} value={n}>
-                            {n} Guest{n !== "1" ? "s" : ""}{n === "5" ? " (max)" : ""}
+                            {n} Guest{n !== "1" ? "s" : ""}{n === "3" ? " (Superior Twin only)" : ""}
                           </Option>
                         ))}
                       </Select>
@@ -908,11 +971,49 @@ const BookingModal = ({ open, onClose, preRoom = null, createdBy = 'website' }) 
                           rules={[{ required: true }]}
                         >
                           <Select size="large">
-                            {["1","2","3","4","5"].map((n) => (
-                              <Option key={n} value={n}>{n}{n === "5" ? "+" : ""} Guest{n !== "1" ? "s" : ""}</Option>
+                            {Array.from(
+                              { length: ROOM_MAX_GUESTS[bookingRoom?.id] ?? 2 },
+                              (_, i) => String(i + 1)
+                            ).map((n) => (
+                              <Option key={n} value={n}>{n} Guest{n !== "1" ? "s" : ""}</Option>
                             ))}
                           </Select>
                         </Form.Item>
+
+                        <div style={{ marginBottom: 24 }}>
+                          <div style={{ fontFamily: "'Inter', sans-serif", fontSize: '0.88rem', marginBottom: 8, color: '#1C2A3A' }}>Meal Plan</div>
+                          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(95px, 1fr))', gap: '8px' }}>
+                            {['bedBreakfast', 'halfBoard', 'fullBoard'].map((plan) => {
+                              const p = bookingRoom?.pricing || bookingRoom?.price_details;
+                              let price = 0;
+                              if (p && !p.single && !p.double) {
+                                price = p[plan];
+                              } else {
+                                const tier = guestCount === 1 ? p?.single : p?.double;
+                                price = tier?.[plan];
+                              }
+                              const labels = { bedBreakfast: 'B&B', halfBoard: 'Half Board', fullBoard: 'Full Board' };
+                              return (
+                                <div 
+                                  key={plan}
+                                  onClick={() => setMealPlan(plan)}
+                                  style={{ 
+                                    border: mealPlan === plan ? '2px solid #0F8F46' : '1px solid #d9d9d9', 
+                                    borderRadius: '8px', 
+                                    padding: '10px 8px', 
+                                    cursor: 'pointer', 
+                                    textAlign: 'center',
+                                    background: mealPlan === plan ? 'rgba(15,143,70,0.05)' : '#fff',
+                                    transition: 'all 0.2s'
+                                  }}
+                                >
+                                  <div style={{ fontSize: '0.8rem', fontWeight: 600, color: mealPlan === plan ? '#0F8F46' : '#1C2A3A' }}>{labels[plan]}</div>
+                                  <div style={{ fontSize: '0.85rem', color: '#F5910F', fontWeight: 700, marginTop: 4 }}>KES {price?.toLocaleString() || 0}</div>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </div>
                       </>
                     )}
 
@@ -951,6 +1052,7 @@ const BookingModal = ({ open, onClose, preRoom = null, createdBy = 'website' }) 
                         <hr className="sv-bk-summary-divider" />
                         <div className="sv-bk-summary-price">
                           <span className="sv-bk-summary-price-label">
+                            {occupancyLabel && <span style={{ color: '#0F8F46', fontWeight: 600, marginRight: 6 }}>[{occupancyLabel}]</span>}
                             KES {roomPricePerNight.toLocaleString()} × {nights} night{nights !== 1 ? "s" : ""}
                           </span>
                           <span className="sv-bk-summary-price-total">

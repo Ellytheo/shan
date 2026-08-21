@@ -7,12 +7,14 @@ import pic5 from '../images/pic5.jpg';
 import pic15 from '../images/pic15.jpg';
 import room1 from '../images/standard.webp';
 import room2 from '../images/vip.webp';
+import vipRoom from '../images/vip.jpg';
 
 const IMAGE_MAP = {
   pic5: pic5,
   pic15: pic15,
   room1: room1,
   room2: room2,
+  vip: vipRoom,
 };
 
 /* ─────────────────────────── DATA ─────────────────────────── */
@@ -20,9 +22,9 @@ const IMAGE_MAP = {
 const ROOMS = [
   {
     id: 1,
-    name: 'Standard Single Room',
-    available: 6,
-    startingPrice: 5000,
+    name: 'Standard Room',
+    available: 7,
+    startingPrice: 4000,
     description:
       'A well-appointed retreat offering modern comforts and elegant simplicity — the ideal base for both leisure and business.',
     image: pic5,
@@ -34,16 +36,15 @@ const ROOMS = [
       { icon: 'bi-briefcase', label: 'Work Desk' },
     ],
     pricing: {
-      bedBreakfast: 5000,
-      halfBoard: 6500,
-      fullBoard: 7500,
+      single: { bedBreakfast: 4000, halfBoard: 5500, fullBoard: 6500 },
+      double: { bedBreakfast: 4700, halfBoard: 7200, fullBoard: 9500 },
     },
   },
   {
     id: 2,
-    name: 'Deluxe Single Room',
-    available: 5,
-    startingPrice: 5000,
+    name: 'Deluxe Room',
+    available: 12,
+    startingPrice: 5200,
     description:
       'Elevated living with a private balcony and resort panoramas. Perfect for those who seek a little more indulgence.',
     image: pic15,
@@ -55,16 +56,15 @@ const ROOMS = [
       { icon: 'bi-bell', label: 'Room Service' },
     ],
     pricing: {
-      bedBreakfast: 5000,
-      halfBoard: 6000,
-      fullBoard: 7300,
+      single: { bedBreakfast: 5200, halfBoard: 6200, fullBoard: 7500 },
+      double: { bedBreakfast: 6000, halfBoard: 8500, fullBoard: 10500 },
     },
   },
   {
     id: 3,
-    name: 'Deluxe Twin Room',
-    available: 4,
-    startingPrice: 6000,
+    name: 'Superior Twin Room',
+    available: 1,
+    startingPrice: 8500,
     description:
       'Spacious twin-bed luxury with smart amenities — crafted for companions, colleagues, or families seeking shared comfort.',
     image: room1,
@@ -76,16 +76,16 @@ const ROOMS = [
       { icon: 'bi-bell', label: 'Room Service' },
     ],
     pricing: {
-      bedBreakfast: 6000,
-      halfBoard: 8500,
-      fullBoard: 10500,
+      bedBreakfast: 8500,
+      halfBoard: 11000,
+      fullBoard: 13000,
     },
   },
   {
     id: 4,
-    name: 'Superior Single Room',
-    available: 6,
-    startingPrice: 8000,
+    name: 'Executive Room',
+    available: 2,
+    startingPrice: 7000,
     description:
       'An exceptional sanctuary featuring luxury bedding, a premium mini bar, and an array of curated amenities for the discerning traveller.',
     image: room2,
@@ -97,9 +97,30 @@ const ROOMS = [
       { icon: 'bi-briefcase', label: 'Work Desk' },
     ],
     pricing: {
-      bedBreakfast: 8000,
-      halfBoard: 9300,
-      fullBoard: 10300,
+      single: { bedBreakfast: 7000, halfBoard: 8500, fullBoard: 9500 },
+      double: { bedBreakfast: 7700, halfBoard: 10000, fullBoard: 12000 },
+    },
+  },
+  {
+    id: 5,
+    name: 'VIP Room',
+    available: 1,
+    startingPrice: 8000,
+    description:
+      'The ultimate in luxury and style. Offers an expansive living layout, premium finishes, and top-tier guest privileges.',
+    image: vipRoom,
+    amenities: [
+      { icon: 'bi-stars', label: 'Luxury Bedding' },
+      { icon: 'bi-cup-straw', label: 'Mini Bar' },
+      { icon: 'bi-display', label: 'Smart TV' },
+      { icon: 'bi-reception-4', label: 'Premium WiFi' },
+      { icon: 'bi-door-open', label: 'Balcony' },
+      { icon: 'bi-bell', label: 'Room Service' },
+      { icon: 'bi-thermometer-snow', label: 'Air Conditioning' },
+    ],
+    pricing: {
+      single: { bedBreakfast: 8000, halfBoard: 9500, fullBoard: 10500 },
+      double: { bedBreakfast: 8700, halfBoard: 11000, fullBoard: 13500 },
     },
   },
 ];
@@ -236,6 +257,13 @@ const RoomCard = ({ room, onViewDetails, liveCount, loading }) => {
 
 const RoomModal = ({ room, visible, onClose, liveCount }) => {
   const [closeHovered, setCloseHovered] = useState(false);
+  const [guestCount, setGuestCount] = useState(1);
+
+  // Reset guest count when modal opens with a new room
+  useEffect(() => {
+    if (visible) setGuestCount(1);
+  }, [visible]);
+
   if (!room) return null;
   const soldOut = liveCount <= 0;
   return (
@@ -329,15 +357,48 @@ const RoomModal = ({ room, visible, onClose, liveCount }) => {
               </div>
 
               {/* Pricing */}
-              <h4 style={{ ...styles.modalSubtitle, marginTop: 28 }}>Pricing Plans</h4>
-              <div className="shanvilla-pricing-grid" style={styles.modalPricingGrid}>
-                {Object.entries(room.pricing).map(([plan, price]) => (
-                  <div key={plan} style={styles.modalPricingCard}>
-                    <span style={styles.modalPricingLabel}>{PLAN_LABELS[plan]}</span>
-                    <span style={styles.modalPricingAmount}>KES {price.toLocaleString()}</span>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '10px', marginTop: 28, marginBottom: 16 }}>
+                <h4 style={{ ...styles.modalSubtitle, margin: 0 }}>Pricing Plans</h4>
+                {room.pricing?.single && (
+                  <div style={{ display: 'flex', gap: '8px', background: 'rgba(15,143,70,0.08)', padding: '4px', borderRadius: '8px' }}>
+                    <button 
+                      onClick={() => setGuestCount(1)}
+                      style={{ border: 'none', background: guestCount === 1 ? '#0F8F46' : 'transparent', color: guestCount === 1 ? 'white' : '#0F8F46', padding: '6px 12px', borderRadius: '6px', cursor: 'pointer', fontWeight: 600, fontSize: '0.85rem', transition: 'all 0.2s' }}
+                    >
+                      1 Guest
+                    </button>
+                    <button 
+                      onClick={() => setGuestCount(2)}
+                      style={{ border: 'none', background: guestCount === 2 ? '#0F8F46' : 'transparent', color: guestCount === 2 ? 'white' : '#0F8F46', padding: '6px 12px', borderRadius: '6px', cursor: 'pointer', fontWeight: 600, fontSize: '0.85rem', transition: 'all 0.2s' }}
+                    >
+                      2 Guests
+                    </button>
                   </div>
-                ))}
+                )}
               </div>
+              
+              {room.pricing?.single ? (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+                  <div className="shanvilla-pricing-grid" style={styles.modalPricingGrid}>
+                    {Object.entries(guestCount === 1 ? room.pricing.single : room.pricing.double).map(([plan, price]) => (
+                      <div key={plan} style={styles.modalPricingCard}>
+                        <span style={styles.modalPricingLabel}>{PLAN_LABELS[plan]}</span>
+                        <span style={styles.modalPricingAmount}>KES {price.toLocaleString()}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ) : (
+                <div className="shanvilla-pricing-grid" style={styles.modalPricingGrid}>
+                  {Object.entries(room.pricing || {}).map(([plan, price]) => (
+                    <div key={plan} style={styles.modalPricingCard}>
+                      <span style={styles.modalPricingLabel}>{PLAN_LABELS[plan]}</span>
+                      <span style={styles.modalPricingAmount}>KES {typeof price === 'number' ? price.toLocaleString() : price}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+
 
               {/* Actions */}
               <div style={{ display: 'flex', justifyContent: 'center', marginTop: 32, width: '100%' }}>
