@@ -1,5 +1,6 @@
 
 import { Carousel } from "antd";
+import styled from "styled-components";
 import {
   FaWifi,
   FaConciergeBell,
@@ -13,6 +14,30 @@ import {
   FaBriefcase,
 } from "react-icons/fa";
 import { MdSupportAgent } from 'react-icons/md';
+
+const VideoSectionContainer = styled.section`
+  padding: 50px 20px;
+  background-color: #FAF2E7;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+`;
+
+const VideoWrapper = styled.div`
+  width: 100%;
+  max-width: 1200px;
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.25);
+`;
+
+const VideoElement = styled.video`
+  width: 100%;
+  max-height: 600px;
+  border-radius: 16px;
+  object-fit: cover;
+  display: block;
+`;
 
 // Make sure to import your custom CSS (amenity-card, testimonial-section, etc.)
 
@@ -105,6 +130,23 @@ const Amenities = () => {
           </div>
         </div>
       </section>
+
+      {/* Garden Video Section */}
+      <VideoSectionContainer>
+        <VideoWrapper>
+          <VideoElement
+            src="/videos/garden.mp4"
+            muted
+            autoPlay
+            loop
+            playsInline
+            controls
+            preload="auto"
+          >
+            Your browser does not support the video tag.
+          </VideoElement>
+        </VideoWrapper>
+      </VideoSectionContainer>
 
       {/* Testimonials Section */}
       <section className="testimonial-section py-1 m-0">

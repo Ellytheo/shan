@@ -3,7 +3,7 @@ import styled, { keyframes } from "styled-components";
 import { FaArrowRight } from "react-icons/fa";
 
 import dis1 from '../images/shan1.jpg';
-import dis2 from '../images/shan3.jpg';
+import dis2 from '../images/outdoor_garden.webp';
 import dis3 from '../images/shan2.jpg';
 import dis4 from '../images/shan4.jpg';
 import dis5 from '../images/logo.png';
