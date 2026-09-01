@@ -875,11 +875,15 @@ def create_booking():
 
             def get_rate(pricing_obj, guest_count, plan):
                 """Return the per-night rate based on occupancy and meal plan."""
-                if pricing_obj.get("single") and pricing_obj.get("double"):
-                    tier = pricing_obj["single"] if guest_count == 1 else pricing_obj["double"]
-                    return Decimal(str(tier.get(plan, tier.get("bedBreakfast", 0))))
-                # Flat pricing (Superior Twin)
-                return Decimal(str(pricing_obj.get(plan, pricing_obj.get("bedBreakfast", 0))))
+                if guest_count >= 3 and pricing_obj.get("triple"):
+                    tier = pricing_obj["triple"]
+                elif guest_count == 1 and pricing_obj.get("single"):
+                    tier = pricing_obj["single"]
+                elif pricing_obj.get("double"):
+                    tier = pricing_obj["double"]
+                else:
+                    tier = pricing_obj
+                return Decimal(str(tier.get(plan, tier.get("bedBreakfast", 0))))
 
             rate = get_rate(pricing, guests, meal_plan) if pricing else Decimal(str(room.get("price", 0)))
             total_price = rate * nights if nights > 0 else Decimal("0")
@@ -1008,10 +1012,15 @@ def edit_booking(booking_id):
                     pricing = {}
 
             def get_rate(pricing_obj, guest_count, plan):
-                if pricing_obj.get("single") and pricing_obj.get("double"):
-                    tier = pricing_obj["single"] if guest_count == 1 else pricing_obj["double"]
-                    return Decimal(str(tier.get(plan, tier.get("bedBreakfast", 0))))
-                return Decimal(str(pricing_obj.get(plan, pricing_obj.get("bedBreakfast", 0))))
+                if guest_count >= 3 and pricing_obj.get("triple"):
+                    tier = pricing_obj["triple"]
+                elif guest_count == 1 and pricing_obj.get("single"):
+                    tier = pricing_obj["single"]
+                elif pricing_obj.get("double"):
+                    tier = pricing_obj["double"]
+                else:
+                    tier = pricing_obj
+                return Decimal(str(tier.get(plan, tier.get("bedBreakfast", 0))))
 
             rate = get_rate(pricing, guests, meal_plan) if pricing else Decimal(str(room.get("price", 0)))
             total_price = rate * nights if nights > 0 else Decimal("0")
@@ -1260,7 +1269,7 @@ def get_rooms_api():
                 rooms.append({
                     "id": r["id"],
                     "name": r["name"],
-                    "price": float(r["price"]),
+                    "price": float(r["price"]) if r["price"] is not None else 0.0,
                     "total_rooms": r["total_rooms"],
                     "description": r["description"] or "",
                     "image_url": r["image_url"] or "",
@@ -1482,6 +1491,7 @@ def run_migrations():
                     "name": "Standard Room",
                     "total_rooms": 7,
                     "max_guests": 2,
+                    "price": 4000,
                     "description": "A well-appointed retreat offering modern comforts and elegant simplicity — the ideal base for both leisure and business.",
                     "image_url": "pic5",
                     "amenities": [
@@ -1500,6 +1510,7 @@ def run_migrations():
                     "name": "Deluxe Room",
                     "total_rooms": 12,
                     "max_guests": 2,
+                    "price": 5200,
                     "description": "Elevated living with a private balcony and resort panoramas. Perfect for those who seek a little more indulgence.",
                     "image_url": "pic15",
                     "amenities": [
@@ -1518,6 +1529,7 @@ def run_migrations():
                     "name": "Superior Twin Room",
                     "total_rooms": 1,
                     "max_guests": 3,
+                    "price": 8500,
                     "description": "Spacious twin-bed luxury with smart amenities — crafted for companions, colleagues, or families seeking shared comfort.",
                     "image_url": "room1",
                     "amenities": [
@@ -1527,17 +1539,16 @@ def run_migrations():
                         {"icon": "bi-snow2",   "label": "Mini Fridge"},
                         {"icon": "bi-bell",    "label": "Room Service"}
                     ],
-                    # Superior Twin: flat pricing (same for 1 or 2-3 guests)
                     "pricing": {
-                        "bedBreakfast": 8500,
-                        "halfBoard": 11000,
-                        "fullBoard": 13000
+                        "double": {"bedBreakfast": 8500, "halfBoard": 11000, "fullBoard": 13000},
+                        "triple": {"bedBreakfast": 9200, "halfBoard": 11700, "fullBoard": 13700}
                     }
                 },
                 4: {
                     "name": "Executive Room",
                     "total_rooms": 2,
                     "max_guests": 2,
+                    "price": 7000,
                     "description": "An exceptional sanctuary featuring luxury bedding, a premium mini bar, and an array of curated amenities for the discerning traveller.",
                     "image_url": "room2",
                     "amenities": [
@@ -1556,6 +1567,7 @@ def run_migrations():
                     "name": "VIP Room",
                     "total_rooms": 1,
                     "max_guests": 2,
+                    "price": 8000,
                     "description": "The ultimate in luxury and style. Offers an expansive living layout, premium finishes, and top-tier guest privileges.",
                     "image_url": "vip",
                     "amenities": [
@@ -1585,25 +1597,28 @@ def run_migrations():
                         SET name = %s,
                             total_rooms = %s,
                             max_guests = %s,
+                            price = %s,
                             pricing = %s
                         WHERE id = %s
                     """, (
                         d["name"],
                         d["total_rooms"],
                         d["max_guests"],
+                        d["price"],
                         json.dumps(d["pricing"]),
                         rid
                     ))
                 else:
                     # Insert new room type (e.g. VIP room)
                     cursor.execute("""
-                        INSERT INTO room_types (id, name, total_rooms, max_guests, description, image_url, amenities, pricing)
-                        VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+                        INSERT INTO room_types (id, name, total_rooms, max_guests, price, description, image_url, amenities, pricing)
+                        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
                     """, (
                         rid,
                         d["name"],
                         d["total_rooms"],
                         d["max_guests"],
+                        d["price"],
                         d["description"],
                         d["image_url"],
                         json.dumps(d["amenities"]),

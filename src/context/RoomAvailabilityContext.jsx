@@ -1,7 +1,7 @@
 import { createContext, useContext, useState, useCallback, useEffect } from 'react';
 import dayjs from 'dayjs';
 
-const API_URL = 'https://shanvilla.pythonanywhere.com';
+const API_URL = (import.meta.env.VITE_API_URL || 'https://shanvilla.pythonanywhere.com').replace(/\/$/, '');
 
 /* ── Fallback counts if API is unreachable ── */
 const FALLBACK_AVAILABILITY = {

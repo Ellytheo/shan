@@ -21,7 +21,15 @@ import room1 from "../images/standard.webp";
 import room2 from "../images/vip.webp";
 import vipRoom from "../images/vip.jpg";
 
-/* ─── max guests per room type ─── */
+/* ─── min/max guests per room type ─── */
+const ROOM_MIN_GUESTS = {
+  1: 1, // Standard
+  2: 1, // Deluxe
+  3: 2, // Superior Twin — only allows 2 or 3 guests (no 1 guest option)
+  4: 1, // Executive
+  5: 1, // VIP
+};
+
 const ROOM_MAX_GUESTS = {
   1: 2, // Standard
   2: 2, // Deluxe
@@ -66,9 +74,8 @@ const LOCAL_ROOMS = [
       "Spacious twin-bed luxury crafted for companions seeking shared comfort.",
     image: room1,
     pricing: {
-      bedBreakfast: 8500,
-      halfBoard: 11000,
-      fullBoard: 13000,
+      double: { bedBreakfast: 8500, halfBoard: 11000, fullBoard: 13000 },
+      triple: { bedBreakfast: 9200, halfBoard: 11700, fullBoard: 13700 },
     },
   },
   {
@@ -639,18 +646,28 @@ const BookingModal = ({ open, onClose, preRoom = null, createdBy = 'website' }) 
   const getRoomRate = (room) => {
     if (!room) return 0;
     const p = room.pricing || room.price_details;
-    // Superior Twin uses flat pricing regardless of guest count
-    if (p && !p.single && !p.double) return p[mealPlan] || room.price || room.startingPrice || 0;
-    // All other rooms: 1 guest = single rate, 2+ guests = double rate
-    const tier = guestCount === 1 ? p?.single : p?.double;
-    return tier?.[mealPlan] || room.price || room.startingPrice || 0;
+    if (!p) return room.price || room.startingPrice || 0;
+    
+    let tier = null;
+    if (guestCount >= 3 && p.triple) {
+      tier = p.triple;
+    } else if (guestCount === 1 && p.single) {
+      tier = p.single;
+    } else {
+      tier = p.double || p.single || p.triple || p;
+    }
+
+    return tier?.[mealPlan] || p[mealPlan] || room.price || room.startingPrice || 0;
   };
   const roomPricePerNight = getRoomRate(bookingRoom);
   const totalPrice = nights * roomPricePerNight;
   const occupancyLabel = (() => {
     const p = bookingRoom?.pricing;
-    if (!p || (!p.single && !p.double)) return null; // flat / Superior Twin
-    return guestCount === 1 ? "Single occupancy" : "Double occupancy";
+    if (!p) return null;
+    if (guestCount >= 3 && p.triple) return "3 Guests occupancy";
+    if (guestCount === 1 && p.single) return "Single occupancy";
+    if (p.double) return "Double occupancy";
+    return null;
   })();
 
   /* ── step-1: check availability ── */
@@ -967,13 +984,13 @@ const BookingModal = ({ open, onClose, preRoom = null, createdBy = 'website' }) 
                         <Form.Item
                           label="Number of Guests"
                           name="guests"
-                          initialValue="2"
+                          initialValue={String(ROOM_MIN_GUESTS[bookingRoom?.id] ?? 2)}
                           rules={[{ required: true }]}
                         >
                           <Select size="large">
                             {Array.from(
-                              { length: ROOM_MAX_GUESTS[bookingRoom?.id] ?? 2 },
-                              (_, i) => String(i + 1)
+                              { length: (ROOM_MAX_GUESTS[bookingRoom?.id] ?? 2) - (ROOM_MIN_GUESTS[bookingRoom?.id] ?? 1) + 1 },
+                              (_, i) => String((ROOM_MIN_GUESTS[bookingRoom?.id] ?? 1) + i)
                             ).map((n) => (
                               <Option key={n} value={n}>{n} Guest{n !== "1" ? "s" : ""}</Option>
                             ))}
@@ -986,11 +1003,15 @@ const BookingModal = ({ open, onClose, preRoom = null, createdBy = 'website' }) 
                             {['bedBreakfast', 'halfBoard', 'fullBoard'].map((plan) => {
                               const p = bookingRoom?.pricing || bookingRoom?.price_details;
                               let price = 0;
-                              if (p && !p.single && !p.double) {
-                                price = p[plan];
+                              if (!p) {
+                                price = 0;
+                              } else if (guestCount >= 3 && p.triple) {
+                                price = p.triple[plan];
+                              } else if (guestCount === 1 && p.single) {
+                                price = p.single[plan];
                               } else {
-                                const tier = guestCount === 1 ? p?.single : p?.double;
-                                price = tier?.[plan];
+                                const tier = p.double || p.single || p.triple || p;
+                                price = tier?.[plan] || p[plan];
                               }
                               const labels = { bedBreakfast: 'B&B', halfBoard: 'Half Board', fullBoard: 'Full Board' };
                               return (

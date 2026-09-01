@@ -195,32 +195,36 @@ const AdminPage = () => {
     try {
       const [cRes, bRes, dRes, rRes, dbRoomsRes, galRes, setRes, usersRes] =
       await Promise.all([
-        api.get('/get_contacts'),
-        api.get('/bookings?limit=200'),
-        api.get('/dashboard'),
-        api.get(`/availability?checkin=${dayjs().format('YYYY-MM-DD')}&checkout=${dayjs().add(1, 'day').format('YYYY-MM-DD')}`),
-        api.get('/api/rooms'),
-        api.get('/api/gallery'),
-        api.get('/api/settings').catch(() => null), // Catch in case endpoint isn't ready
-        api.get('/api/users').catch(() => null),    // Fetch users list from backend
+        api.get('/get_contacts').catch(err => ({ error: err })),
+        api.get('/bookings?limit=200').catch(err => ({ error: err })),
+        api.get('/dashboard').catch(err => ({ error: err })),
+        api.get(`/availability?checkin=${dayjs().format('YYYY-MM-DD')}&checkout=${dayjs().add(1, 'day').format('YYYY-MM-DD')}`).catch(err => ({ error: err })),
+        api.get('/api/rooms').catch(err => ({ error: err })),
+        api.get('/api/gallery').catch(err => ({ error: err })),
+        api.get('/api/settings').catch(() => null),
+        api.get('/api/users').catch(() => null),
       ]);
 
-      if (cRes.data.status === 'success') {
+      const hasFatalNetworkError = [cRes, bRes, dRes].every(res => res?.error && !res?.error?.response);
+      if (hasFatalNetworkError) {
+        throw new Error('Network error: server unreachable');
+      }
+
+      if (cRes?.data?.status === 'success') {
         const data = cRes.data.data || [];
         setContacts(data);
         const readIds = data.filter(c => c.status === 'read').map(c => c.id);
         setReadSet(new Set(readIds));
-      }
-      else message.error('Failed to load inquiries.');
+      } else if (cRes?.data) message.error('Failed to load inquiries.');
 
-      if (bRes.data.status === 'success') setBookings(bRes.data.bookings || []);
-      else message.error('Failed to load bookings.');
+      if (bRes?.data?.status === 'success') setBookings(bRes.data.bookings || []);
+      else if (bRes?.data) message.error('Failed to load bookings.');
 
-      if (dRes.data.status === 'success') setStats(dRes.data);
+      if (dRes?.data?.status === 'success') setStats(dRes.data);
 
-      if (dbRoomsRes.data.status === 'success' && rRes.data.status === 'success') {
-        const liveAvailability = rRes.data.rooms || [];
-        const dbRooms = dbRoomsRes.data.rooms || [];
+      if (dbRoomsRes?.data?.status === 'success' || rRes?.data?.status === 'success') {
+        const liveAvailability = rRes?.data?.rooms || [];
+        const dbRooms = dbRoomsRes?.data?.rooms || liveAvailability || [];
         
         const mergedRooms = dbRooms.map(dbR => {
           const avail = liveAvailability.find(a => a.id === dbR.id);
@@ -233,7 +237,7 @@ const AdminPage = () => {
         setRooms(mergedRooms);
       }
 
-      if (galRes.data.status === 'success') {
+      if (galRes?.data?.status === 'success') {
         setGalleryList(galRes.data.images || []);
       }
 
@@ -335,14 +339,33 @@ const AdminPage = () => {
     const previewUrl = IMAGE_MAP[room.image_url] || (room.image_url?.startsWith('/uploads/') ? `${API_BASE}${room.image_url}` : room.image_url);
     setRoomImagePreview(previewUrl);
     setUploadProgress(0);
+
+    const p = room.pricing || {};
+    const singleP = p.single || (p.bedBreakfast ? p : {});
+    const doubleP = p.double || (p.single ? p.double : p);
+    const tripleP = p.triple || {};
+
     roomForm.setFieldsValue({
       name: room.name,
       image_url: room.image_url,
       price: room.price,
       description: room.description,
-      price_bb: room.pricing?.bedBreakfast || room.price,
-      price_hb: room.pricing?.halfBoard || room.price,
-      price_fb: room.pricing?.fullBoard || room.price,
+      
+      // Single occupancy (1 guest)
+      single_bb: singleP.bedBreakfast ?? room.price,
+      single_hb: singleP.halfBoard ?? room.price,
+      single_fb: singleP.fullBoard ?? room.price,
+
+      // Double occupancy (2 guests)
+      double_bb: doubleP.bedBreakfast ?? room.price,
+      double_hb: doubleP.halfBoard ?? room.price,
+      double_fb: doubleP.fullBoard ?? room.price,
+
+      // Triple occupancy (3 guests)
+      triple_bb: tripleP.bedBreakfast ?? (doubleP.bedBreakfast ? doubleP.bedBreakfast + 700 : room.price),
+      triple_hb: tripleP.halfBoard ?? (doubleP.halfBoard ? doubleP.halfBoard + 700 : room.price),
+      triple_fb: tripleP.fullBoard ?? (doubleP.fullBoard ? doubleP.fullBoard + 700 : room.price),
+
       selected_amenities: selected,
     });
   };
@@ -353,27 +376,59 @@ const AdminPage = () => {
         const [icon, label] = str.split('|');
         return { icon, label };
       });
+
+      const isSuperior = editRoom?.id === 3 || editRoom?.name?.toLowerCase().includes('superior');
+
+      let pricingPayload = {};
+      if (isSuperior) {
+        // Superior Twin Room: 2 Guests (double) & 3 Guests (triple)
+        pricingPayload = {
+          double: {
+            bedBreakfast: Number(vals.double_bb),
+            halfBoard: Number(vals.double_hb),
+            fullBoard: Number(vals.double_fb),
+          },
+          triple: {
+            bedBreakfast: Number(vals.triple_bb),
+            halfBoard: Number(vals.triple_hb),
+            fullBoard: Number(vals.triple_fb),
+          }
+        };
+      } else {
+        // Standard, Deluxe, Executive, VIP: 1 Guest (single) & 2 Guests (double)
+        pricingPayload = {
+          single: {
+            bedBreakfast: Number(vals.single_bb),
+            halfBoard: Number(vals.single_hb),
+            fullBoard: Number(vals.single_fb),
+          },
+          double: {
+            bedBreakfast: Number(vals.double_bb),
+            halfBoard: Number(vals.double_hb),
+            fullBoard: Number(vals.double_fb),
+          }
+        };
+      }
+
       const payload = {
         name: vals.name,
         price: Number(vals.price),
         description: vals.description,
         image_url: vals.image_url,
         amenities: amenities,
-        pricing: {
-          bedBreakfast: Number(vals.price_bb),
-          halfBoard: Number(vals.price_hb),
-          fullBoard: Number(vals.price_fb),
-        }
+        pricing: pricingPayload,
       };
+
       const res = await api.put(`/api/rooms/${editRoom.id}`, payload);
       if (res.data.status === 'success') {
-        message.success('Room updated.');
+        message.success('Room details updated.');
         setEditRoom(null);
         fetchData();
       } else {
-        message.error(res.data.message || 'Failed to update.');
+        message.error(res.data.message || 'Failed to update room.');
       }
     } catch (err) {
+      if (import.meta.env.DEV) console.error('[saveRoomEdit]', err);
       message.error(err.response?.data?.message || 'Error updating room.');
     }
   };
@@ -1514,12 +1569,59 @@ const AdminPage = () => {
               <Form.Item label="Starting Price (KES)" name="price" rules={[{required:true, message: 'Please enter the starting price'}]}><Input type="number" /></Form.Item>
               <Form.Item label="Description" name="description" rules={[{required:true, message: 'Please enter the description'}]}><Input.TextArea rows={3} /></Form.Item>
               
-              <h4 style={{ margin: '18px 0 10px', fontSize: '0.95rem', fontWeight: 700, color: 'var(--text-main)' }}>Pricing Plans (KES)</h4>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '12px' }}>
-                <Form.Item label="Bed & Breakfast" name="price_bb" rules={[{required:true}]}><Input type="number" /></Form.Item>
-                <Form.Item label="Half Board" name="price_hb" rules={[{required:true}]}><Input type="number" /></Form.Item>
-                <Form.Item label="Full Board" name="price_fb" rules={[{required:true}]}><Input type="number" /></Form.Item>
-              </div>
+              <h4 style={{ margin: '20px 0 12px', fontSize: '0.98rem', fontWeight: 700, color: 'var(--text-main)', borderBottom: '1px solid var(--border-color)', paddingBottom: 6 }}>
+                Occupancy Pricing Plans (KES)
+              </h4>
+
+              {editRoom?.id === 3 || editRoom?.name?.toLowerCase().includes('superior') ? (
+                <>
+                  <div style={{ background: 'rgba(15,143,70,0.04)', border: '1px solid rgba(15,143,70,0.2)', borderRadius: 10, padding: 14, marginBottom: 14 }}>
+                    <div style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--primary-green)', marginBottom: 10, display: 'flex', alignItems: 'center', gap: 6 }}>
+                      <i className="bi bi-people-fill" /> Double Occupancy (2 Guests)
+                    </div>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '10px' }}>
+                      <Form.Item label="B&B (2 Guests)" name="double_bb" rules={[{required:true}]}><Input type="number" /></Form.Item>
+                      <Form.Item label="Half Board (2 Guests)" name="double_hb" rules={[{required:true}]}><Input type="number" /></Form.Item>
+                      <Form.Item label="Full Board (2 Guests)" name="double_fb" rules={[{required:true}]}><Input type="number" /></Form.Item>
+                    </div>
+                  </div>
+
+                  <div style={{ background: 'rgba(235,123,19,0.04)', border: '1px solid rgba(235,123,19,0.2)', borderRadius: 10, padding: 14, marginBottom: 14 }}>
+                    <div style={{ fontSize: '0.85rem', fontWeight: 700, color: '#D97706', marginBottom: 10, display: 'flex', alignItems: 'center', gap: 6 }}>
+                      <i className="bi bi-person-fill-add" /> Triple Occupancy (3 Guests)
+                    </div>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '10px' }}>
+                      <Form.Item label="B&B (3 Guests)" name="triple_bb" rules={[{required:true}]}><Input type="number" /></Form.Item>
+                      <Form.Item label="Half Board (3 Guests)" name="triple_hb" rules={[{required:true}]}><Input type="number" /></Form.Item>
+                      <Form.Item label="Full Board (3 Guests)" name="triple_fb" rules={[{required:true}]}><Input type="number" /></Form.Item>
+                    </div>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div style={{ background: 'rgba(14,93,158,0.04)', border: '1px solid rgba(14,93,158,0.2)', borderRadius: 10, padding: 14, marginBottom: 14 }}>
+                    <div style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--primary-blue)', marginBottom: 10, display: 'flex', alignItems: 'center', gap: 6 }}>
+                      <i className="bi bi-person-fill" /> Single Occupancy (1 Guest)
+                    </div>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '10px' }}>
+                      <Form.Item label="B&B (1 Guest)" name="single_bb" rules={[{required:true}]}><Input type="number" /></Form.Item>
+                      <Form.Item label="Half Board (1 Guest)" name="single_hb" rules={[{required:true}]}><Input type="number" /></Form.Item>
+                      <Form.Item label="Full Board (1 Guest)" name="single_fb" rules={[{required:true}]}><Input type="number" /></Form.Item>
+                    </div>
+                  </div>
+
+                  <div style={{ background: 'rgba(15,143,70,0.04)', border: '1px solid rgba(15,143,70,0.2)', borderRadius: 10, padding: 14, marginBottom: 14 }}>
+                    <div style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--primary-green)', marginBottom: 10, display: 'flex', alignItems: 'center', gap: 6 }}>
+                      <i className="bi bi-people-fill" /> Double Occupancy (2 Guests)
+                    </div>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '10px' }}>
+                      <Form.Item label="B&B (2 Guests)" name="double_bb" rules={[{required:true}]}><Input type="number" /></Form.Item>
+                      <Form.Item label="Half Board (2 Guests)" name="double_hb" rules={[{required:true}]}><Input type="number" /></Form.Item>
+                      <Form.Item label="Full Board (2 Guests)" name="double_fb" rules={[{required:true}]}><Input type="number" /></Form.Item>
+                    </div>
+                  </div>
+                </>
+              )}
               
               <Form.Item label="Room Amenities" name="selected_amenities">
                 <Select mode="multiple" placeholder="Select amenities" style={{ width: '100%' }} maxTagCount="responsive">

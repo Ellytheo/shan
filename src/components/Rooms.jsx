@@ -76,9 +76,8 @@ const ROOMS = [
       { icon: 'bi-bell', label: 'Room Service' },
     ],
     pricing: {
-      bedBreakfast: 8500,
-      halfBoard: 11000,
-      fullBoard: 13000,
+      double: { bedBreakfast: 8500, halfBoard: 11000, fullBoard: 13000 },
+      triple: { bedBreakfast: 9200, halfBoard: 11700, fullBoard: 13700 },
     },
   },
   {
@@ -359,7 +358,22 @@ const RoomModal = ({ room, visible, onClose, liveCount }) => {
               {/* Pricing */}
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '10px', marginTop: 28, marginBottom: 16 }}>
                 <h4 style={{ ...styles.modalSubtitle, margin: 0 }}>Pricing Plans</h4>
-                {room.pricing?.single && (
+                {room.pricing?.double && room.pricing?.triple ? (
+                  <div style={{ display: 'flex', gap: '8px', background: 'rgba(15,143,70,0.08)', padding: '4px', borderRadius: '8px' }}>
+                    <button 
+                      onClick={() => setGuestCount(2)}
+                      style={{ border: 'none', background: guestCount === 2 ? '#0F8F46' : 'transparent', color: guestCount === 2 ? 'white' : '#0F8F46', padding: '6px 12px', borderRadius: '6px', cursor: 'pointer', fontWeight: 600, fontSize: '0.85rem', transition: 'all 0.2s' }}
+                    >
+                      2 Guests
+                    </button>
+                    <button 
+                      onClick={() => setGuestCount(3)}
+                      style={{ border: 'none', background: guestCount === 3 ? '#0F8F46' : 'transparent', color: guestCount === 3 ? 'white' : '#0F8F46', padding: '6px 12px', borderRadius: '6px', cursor: 'pointer', fontWeight: 600, fontSize: '0.85rem', transition: 'all 0.2s' }}
+                    >
+                      3 Guests
+                    </button>
+                  </div>
+                ) : room.pricing?.single ? (
                   <div style={{ display: 'flex', gap: '8px', background: 'rgba(15,143,70,0.08)', padding: '4px', borderRadius: '8px' }}>
                     <button 
                       onClick={() => setGuestCount(1)}
@@ -374,30 +388,29 @@ const RoomModal = ({ room, visible, onClose, liveCount }) => {
                       2 Guests
                     </button>
                   </div>
-                )}
+                ) : null}
               </div>
               
-              {room.pricing?.single ? (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
-                  <div className="shanvilla-pricing-grid" style={styles.modalPricingGrid}>
-                    {Object.entries(guestCount === 1 ? room.pricing.single : room.pricing.double).map(([plan, price]) => (
-                      <div key={plan} style={styles.modalPricingCard}>
-                        <span style={styles.modalPricingLabel}>{PLAN_LABELS[plan]}</span>
-                        <span style={styles.modalPricingAmount}>KES {price.toLocaleString()}</span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              ) : (
-                <div className="shanvilla-pricing-grid" style={styles.modalPricingGrid}>
-                  {Object.entries(room.pricing || {}).map(([plan, price]) => (
-                    <div key={plan} style={styles.modalPricingCard}>
-                      <span style={styles.modalPricingLabel}>{PLAN_LABELS[plan]}</span>
-                      <span style={styles.modalPricingAmount}>KES {typeof price === 'number' ? price.toLocaleString() : price}</span>
+              {(() => {
+                const p = room.pricing || {};
+                let currentTier = null;
+                if (guestCount === 3 && p.triple) currentTier = p.triple;
+                else if (guestCount === 1 && p.single) currentTier = p.single;
+                else currentTier = p.double || p.single || p.triple || p;
+
+                return (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+                    <div className="shanvilla-pricing-grid" style={styles.modalPricingGrid}>
+                      {Object.entries(currentTier).map(([plan, price]) => (
+                        <div key={plan} style={styles.modalPricingCard}>
+                          <span style={styles.modalPricingLabel}>{PLAN_LABELS[plan] || plan}</span>
+                          <span style={styles.modalPricingAmount}>KES {typeof price === 'number' ? price.toLocaleString() : price}</span>
+                        </div>
+                      ))}
                     </div>
-                  ))}
-                </div>
-              )}
+                  </div>
+                );
+              })()}
 
 
               {/* Actions */}
@@ -462,7 +475,8 @@ const Rooms = () => {
   useEffect(() => {
     const fetchRooms = async () => {
       try {
-        const res = await fetch('https://shanvilla.pythonanywhere.com/api/rooms');
+        const baseUrl = (import.meta.env.VITE_API_URL || 'https://shanvilla.pythonanywhere.com').replace(/\/$/, '');
+        const res = await fetch(`${baseUrl}/api/rooms`);
         const data = await res.json();
         if (data.status === 'success' && data.rooms && data.rooms.length > 0) {
           const mapped = data.rooms.map(r => ({
