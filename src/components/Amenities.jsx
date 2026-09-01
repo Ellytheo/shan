@@ -16,7 +16,7 @@ import {
 import { MdSupportAgent } from 'react-icons/md';
 
 const VideoSectionContainer = styled.section`
-  padding: 50px 20px;
+  padding: 12px 20px;
   background-color: #FAF2E7;
   display: flex;
   justify-content: center;
