@@ -760,7 +760,7 @@ const BookingModal = ({ open, onClose, preRoom = null, createdBy = 'website' }) 
       };
 
       const resp = await api.post(`${API_URL}/create_booking`, payload);
-      setBookingRef(resp.data.booking_reference || "CONF-" + Date.now());
+      setBookingRef(resp.data.booking?.booking_reference || resp.data.booking_reference || "CONF-" + Date.now());
       // Optimistic local decrement + re-fetch from DB so badges survive a refresh
       decrementRoom(room.id);
       refreshAvailability();

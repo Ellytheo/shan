@@ -91,13 +91,16 @@ def send_booking_email_async(booking_data, room_name, total_price, reference):
             admin_msg.attach(MIMEText(admin_plain, "plain"))
             admin_msg.attach(MIMEText(admin_html, "html"))
 
-            with smtplib.SMTP(smtp_server, smtp_port, timeout=12) as server:
+            # ── Admin notification ────────────────────────────────────────
+            with smtplib.SMTP(smtp_server, smtp_port, timeout=20) as server:
                 server.starttls()
                 server.login(smtp_user, smtp_password)
                 server.send_message(admin_msg)
+            print(f"[Email Notification] Admin email dispatched for #{reference}")
 
-                # 2. Confirmation Email to Guest
-                if booking_data.get("email"):
+            # ── Guest confirmation (separate connection) ───────────────────
+            if booking_data.get("email"):
+                try:
                     guest_msg = MIMEMultipart("alternative")
                     guest_msg["From"] = f"Shanvilla Resort <{smtp_user}>"
                     guest_msg["To"] = booking_data["email"]
@@ -108,7 +111,7 @@ def send_booking_email_async(booking_data, room_name, total_price, reference):
                       <h2 style="color: #0F8F46;">Thank You For Choosing Shanvilla Resort!</h2>
                       <p>Dear {booking_data['guest_name']},</p>
                       <p>We have successfully received your booking. Here is your reservation summary:</p>
-                      
+
                       <div style="background: #FAF5EF; padding: 16px; border-radius: 10px; margin: 15px 0;">
                         <p style="margin: 6px 0;"><strong>Booking Reference:</strong> #{reference}</p>
                         <p style="margin: 6px 0;"><strong>Room Type:</strong> {room_name}</p>
@@ -118,13 +121,20 @@ def send_booking_email_async(booking_data, room_name, total_price, reference):
                       </div>
 
                       <p>If you have any special requests or questions, please feel free to call us at <strong>+254 111427894</strong> or email reception@shanvillaresortkenya.co.ke.</p>
-                      <p style="color: #666; font-size: 13px; margin-top: 25px;">Shanvilla Resort Ltd, Maragua, Murang’a County, Kenya</p>
+                      <p style="color: #666; font-size: 13px; margin-top: 25px;">Shanvilla Resort Ltd, Maragua, Murang'a County, Kenya</p>
                     </div>
                     """
                     guest_msg.attach(MIMEText(guest_html, "html"))
-                    server.send_message(guest_msg)
 
-            print(f"[Email Notification] Successfully dispatched booking emails for #{reference}")
+                    with smtplib.SMTP(smtp_server, smtp_port, timeout=20) as guest_server:
+                        guest_server.starttls()
+                        guest_server.login(smtp_user, smtp_password)
+                        guest_server.send_message(guest_msg)
+                    print(f"[Email Notification] Guest confirmation sent to {booking_data['email']} for #{reference}")
+                except Exception as guest_err:
+                    print(f"[Email Notification Warning] Guest email failed for #{reference}: {guest_err}")
+
+            print(f"[Email Notification] All emails processed for #{reference}")
         except Exception as e:
             print(f"[Email Notification Error] Failed to send email for booking #{reference}: {e}")
 
