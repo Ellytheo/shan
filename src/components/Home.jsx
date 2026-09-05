@@ -233,14 +233,15 @@ const AnimatedImage = styled.img`
   border-radius: 12px;
   will-change: transform, opacity;
   
+  /* Slide from the hidden side based on the direction prop, stopping at the boundary (translateX(0)) */
   transform: ${props => 
     props.$isInView 
-      ? 'translate3d(0, 0, 0)' 
-      : (props.$direction === 'left' ? 'translate3d(30px, 0, 0)' : 'translate3d(-30px, 0, 0)')
+      ? 'translateX(0)' 
+      : (props.$direction === 'left' ? 'translateX(100%)' : 'translateX(-100%)')
   };
   opacity: ${props => props.$isInView ? 1 : 0};
   
-  transition: transform 0.65s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.65s ease-out;
+  transition: transform 0.9s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.9s ease-out;
   transition-delay: ${props => props.$isInView ? props.$delay || '0s' : '0s'};
 `;
 
@@ -256,18 +257,19 @@ const ScrollHighlightImage = ({ src, alt, delay, direction }) => {
       ([entry]) => {
         if (entry.isIntersecting) {
           setIsInView(true);
-          observer.unobserve(entry.target);
+        } else {
+          setIsInView(false); // reset so it triggers every time the user scrolls back into it
         }
       },
       {
-        threshold: 0.15,
+        threshold: 0.1, // trigger when 10% of the image is visible
       }
     );
 
     observer.observe(node);
 
     return () => {
-      observer.disconnect();
+      observer.unobserve(node);
     };
   }, []);
 
@@ -277,7 +279,6 @@ const ScrollHighlightImage = ({ src, alt, delay, direction }) => {
         src={src}
         alt={alt}
         loading="lazy"
-        decoding="async"
         $isInView={isInView}
         $delay={delay}
         $direction={direction}
