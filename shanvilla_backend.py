@@ -39,12 +39,12 @@ def send_booking_email_async(booking_data, room_name, total_price, reference):
     def _send():
         smtp_server = os.environ.get("SMTP_SERVER", "smtp.gmail.com")
         smtp_port = int(os.environ.get("SMTP_PORT", 587))
-        smtp_user = os.environ.get("SMTP_EMAIL", "")
-        smtp_password = os.environ.get("SMTP_PASSWORD", "")
-        admin_email = os.environ.get("ADMIN_NOTIFICATION_EMAIL", "reception@shanvillaresortkenya.co.ke")
+        smtp_user = os.environ.get("SMTP_EMAIL", "memnoion@gmail.com")
+        smtp_password = os.environ.get("SMTP_PASSWORD", "ckmjfxzxfpbtdsdy")
+        admin_email = os.environ.get("ADMIN_NOTIFICATION_EMAIL", "memnoion@gmail.com")
 
         if not smtp_user or not smtp_password:
-            print("[Email Notification Warning] SMTP credentials not configured. Set SMTP_EMAIL & SMTP_PASSWORD in environment to enable email push notifications.")
+            print("[Email Notification Warning] SMTP credentials not configured. Skipping email dispatch.")
             return
 
         try:
@@ -134,9 +134,9 @@ def send_contact_email_async(contact_data):
     def _send():
         smtp_server = os.environ.get("SMTP_SERVER", "smtp.gmail.com")
         smtp_port = int(os.environ.get("SMTP_PORT", 587))
-        smtp_user = os.environ.get("SMTP_EMAIL", "")
-        smtp_password = os.environ.get("SMTP_PASSWORD", "")
-        admin_email = os.environ.get("ADMIN_NOTIFICATION_EMAIL", "reception@shanvillaresortkenya.co.ke")
+        smtp_user = os.environ.get("SMTP_EMAIL", "memnoion@gmail.com")
+        smtp_password = os.environ.get("SMTP_PASSWORD", "ckmjfxzxfpbtdsdy")
+        admin_email = os.environ.get("ADMIN_NOTIFICATION_EMAIL", "memnoion@gmail.com")
 
         if not smtp_user or not smtp_password:
             return
