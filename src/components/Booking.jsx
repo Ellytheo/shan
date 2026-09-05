@@ -643,15 +643,16 @@ const BookingModal = ({ open, onClose, preRoom = null, createdBy = 'website' }) 
 
   // calculate total price — use single/double occupancy rates where available
   const guestCount = parseInt(guestsVal) || 2;
-  const getRoomRate = (room) => {
+  const getRoomRate = (room, overrideGuests = null) => {
     if (!room) return 0;
     const p = room.pricing || room.price_details;
     if (!p) return room.price || room.startingPrice || 0;
     
+    const gCount = parseInt(overrideGuests !== null ? overrideGuests : guestsVal) || 2;
     let tier = null;
-    if (guestCount >= 3 && p.triple) {
+    if (gCount >= 3 && p.triple) {
       tier = p.triple;
-    } else if (guestCount === 1 && p.single) {
+    } else if (gCount === 1 && p.single) {
       tier = p.single;
     } else {
       tier = p.double || p.single || p.triple || p;
@@ -676,32 +677,49 @@ const BookingModal = ({ open, onClose, preRoom = null, createdBy = 'website' }) 
       setAvailLoading(true);
       const checkin = values.dates[0].format("YYYY-MM-DD");
       const checkout = values.dates[1].format("YYYY-MM-DD");
+      const numGuests = parseInt(values.guests) || 1;
       setSearchData({ checkin, checkout, guests: values.guests });
 
-      const resp = await api.get(`${API_URL}/availability`, {
-        params: { checkin, checkout },
-      });
+      let apiRooms = [];
+      try {
+        const resp = await api.get(`${API_URL}/availability`, {
+          params: { checkin, checkout },
+        });
+        apiRooms = resp.data.rooms || [];
+      } catch (err) {
+        if (import.meta.env.DEV) console.warn('[checkAvailability API fail, using local fallback]', err);
+        apiRooms = LOCAL_ROOMS;
+      }
 
       // Merge API response with local room data for images / descriptions
-      const apiRooms = resp.data.rooms || [];
-      const merged = apiRooms.map((apiRoom) => {
+      const merged = (apiRooms.length > 0 ? apiRooms : LOCAL_ROOMS).map((apiRoom) => {
         const local = LOCAL_ROOMS.find(
           (r) => r.name.toLowerCase() === apiRoom.name?.toLowerCase() || r.id === apiRoom.id
         );
+        const rId = apiRoom.id || local?.id;
         return {
           ...apiRoom,
-          image: local?.image || null,
-          description: local?.description || "",
-          // API now returns these; fall back to local data if missing
+          id: rId,
+          name: apiRoom.name || local?.name,
+          image: local?.image || apiRoom.image || null,
+          description: local?.description || apiRoom.description || "",
           pricing: apiRoom.pricing || local?.pricing || null,
-          max_guests: apiRoom.max_guests ?? local?.max_guests ?? 2,
+          max_guests: apiRoom.max_guests ?? ROOM_MAX_GUESTS[rId] ?? local?.max_guests ?? 2,
+          min_guests: ROOM_MIN_GUESTS[rId] ?? 1,
         };
       });
 
-      if (merged.length === 0) {
-        message.info("No rooms available for the selected dates.");
+      // Filter rooms strictly by guest capacity requirements
+      const suitableRooms = merged.filter((room) => {
+        const maxG = room.max_guests ?? ROOM_MAX_GUESTS[room.id] ?? 2;
+        const minG = room.min_guests ?? ROOM_MIN_GUESTS[room.id] ?? 1;
+        return numGuests >= minG && numGuests <= maxG;
+      });
+
+      if (suitableRooms.length === 0) {
+        message.info(`No rooms available for ${numGuests} guest${numGuests !== 1 ? 's' : ''} on the selected dates.`);
       }
-      setAvailRooms(merged);
+      setAvailRooms(suitableRooms);
     } catch (err) {
       if (import.meta.env.DEV) console.error('[checkAvailability]', err);
       const errMsg = err.response?.data?.message || err.response?.data?.error || "Unable to check availability. Please try again.";
@@ -891,27 +909,32 @@ const BookingModal = ({ open, onClose, preRoom = null, createdBy = 'website' }) 
                         <i className="bi bi-door-open" /> Available Rooms
                       </p>
                       <div className="sv-bk-avail-grid">
-                        {availRooms.map((room) => (
-                          <div key={room.id} className="sv-bk-avail-card">
-                            {room.image && <img src={room.image} alt={room.name} />}
-                            <div className="sv-bk-avail-card-body">
-                              <h4>{room.name}</h4>
-                              {room.description && <p>{room.description}</p>}
-                              <div className="sv-bk-avail-card-price">KES {(room.price || room.startingPrice || 0).toLocaleString()} / night</div>
-                              <div className="sv-bk-avail-card-avail">
-                                <i className="bi bi-check-circle-fill" style={{ marginRight: 4 }} />
-                                {room.available} {room.available === 1 ? "Room" : "Rooms"} Available
+                        {availRooms.map((room) => {
+                          const nightRate = getRoomRate(room, searchData?.guests);
+                          return (
+                            <div key={room.id} className="sv-bk-avail-card">
+                              {room.image && <img src={room.image} alt={room.name} />}
+                              <div className="sv-bk-avail-card-body">
+                                <h4>{room.name}</h4>
+                                {room.description && <p>{room.description}</p>}
+                                <div className="sv-bk-avail-card-price">
+                                  KES {nightRate.toLocaleString()} / night
+                                </div>
+                                <div className="sv-bk-avail-card-avail">
+                                  <i className="bi bi-check-circle-fill" style={{ marginRight: 4 }} />
+                                  {room.available} {room.available === 1 ? "Room" : "Rooms"} Available
+                                </div>
+                                <button
+                                  className="sv-bk-avail-reserve-btn"
+                                  disabled={room.available <= 0}
+                                  onClick={() => setSelectedRoom(room)}
+                                >
+                                  {room.available > 0 ? "Reserve Now" : "Sold Out"}
+                                </button>
                               </div>
-                              <button
-                                className="sv-bk-avail-reserve-btn"
-                                disabled={room.available <= 0}
-                                onClick={() => setSelectedRoom(room)}
-                              >
-                                {room.available > 0 ? "Reserve Now" : "Sold Out"}
-                              </button>
                             </div>
-                          </div>
-                        ))}
+                          );
+                        })}
                       </div>
                     </motion.div>
                   )}
@@ -996,47 +1019,48 @@ const BookingModal = ({ open, onClose, preRoom = null, createdBy = 'website' }) 
                             ))}
                           </Select>
                         </Form.Item>
-
-                        <div style={{ marginBottom: 24 }}>
-                          <div style={{ fontFamily: "'Inter', sans-serif", fontSize: '0.88rem', marginBottom: 8, color: '#1C2A3A' }}>Meal Plan</div>
-                          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(95px, 1fr))', gap: '8px' }}>
-                            {['bedBreakfast', 'halfBoard', 'fullBoard'].map((plan) => {
-                              const p = bookingRoom?.pricing || bookingRoom?.price_details;
-                              let price = 0;
-                              if (!p) {
-                                price = 0;
-                              } else if (guestCount >= 3 && p.triple) {
-                                price = p.triple[plan];
-                              } else if (guestCount === 1 && p.single) {
-                                price = p.single[plan];
-                              } else {
-                                const tier = p.double || p.single || p.triple || p;
-                                price = tier?.[plan] || p[plan];
-                              }
-                              const labels = { bedBreakfast: 'B&B', halfBoard: 'Half Board', fullBoard: 'Full Board' };
-                              return (
-                                <div 
-                                  key={plan}
-                                  onClick={() => setMealPlan(plan)}
-                                  style={{ 
-                                    border: mealPlan === plan ? '2px solid #0F8F46' : '1px solid #d9d9d9', 
-                                    borderRadius: '8px', 
-                                    padding: '10px 8px', 
-                                    cursor: 'pointer', 
-                                    textAlign: 'center',
-                                    background: mealPlan === plan ? 'rgba(15,143,70,0.05)' : '#fff',
-                                    transition: 'all 0.2s'
-                                  }}
-                                >
-                                  <div style={{ fontSize: '0.8rem', fontWeight: 600, color: mealPlan === plan ? '#0F8F46' : '#1C2A3A' }}>{labels[plan]}</div>
-                                  <div style={{ fontSize: '0.85rem', color: '#F5910F', fontWeight: 700, marginTop: 4 }}>KES {price?.toLocaleString() || 0}</div>
-                                </div>
-                              );
-                            })}
-                          </div>
-                        </div>
                       </>
                     )}
+
+                    {/* Meal Plan Selector (rendered in both direct mode and general mode) */}
+                    <div style={{ marginBottom: 24 }}>
+                      <div style={{ fontFamily: "'Inter', sans-serif", fontSize: '0.88rem', marginBottom: 8, color: '#1C2A3A' }}>Meal Plan</div>
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(95px, 1fr))', gap: '8px' }}>
+                        {['bedBreakfast', 'halfBoard', 'fullBoard'].map((plan) => {
+                          const p = bookingRoom?.pricing || bookingRoom?.price_details;
+                          let price = 0;
+                          if (!p) {
+                            price = 0;
+                          } else if (guestCount >= 3 && p.triple) {
+                            price = p.triple[plan];
+                          } else if (guestCount === 1 && p.single) {
+                            price = p.single[plan];
+                          } else {
+                            const tier = p.double || p.single || p.triple || p;
+                            price = tier?.[plan] || p[plan];
+                          }
+                          const labels = { bedBreakfast: 'B&B', halfBoard: 'Half Board', fullBoard: 'Full Board' };
+                          return (
+                            <div 
+                              key={plan}
+                              onClick={() => setMealPlan(plan)}
+                              style={{ 
+                                border: mealPlan === plan ? '2px solid #0F8F46' : '1px solid #d9d9d9', 
+                                borderRadius: '8px', 
+                                padding: '10px 8px', 
+                                cursor: 'pointer', 
+                                textAlign: 'center',
+                                background: mealPlan === plan ? 'rgba(15,143,70,0.05)' : '#fff',
+                                transition: 'all 0.2s'
+                              }}
+                            >
+                              <div style={{ fontSize: '0.8rem', fontWeight: 600, color: mealPlan === plan ? '#0F8F46' : '#1C2A3A' }}>{labels[plan]}</div>
+                              <div style={{ fontSize: '0.85rem', color: '#F5910F', fontWeight: 700, marginTop: 4 }}>KES {price?.toLocaleString() || 0}</div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
 
                     {/* Stay Summary Panel */}
                     {checkinVal && checkoutVal && nights > 0 && (
