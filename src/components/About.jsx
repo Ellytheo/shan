@@ -164,7 +164,7 @@ const About = () => {
     loop
     playsInline
     controls
-    preload="auto"
+    preload="metadata"
   >
     Your browser does not support the video tag.
   </VideoElement>

@@ -106,10 +106,13 @@ const Gallery = () => {
             <img
               src={src}
               alt={`gallery ${index + 1}`}
+              loading="lazy"
+              decoding="async"
               style={{
                 width: "100%",
                 height: "100%",
                 objectFit: "cover",
+                willChange: "transform",
                 transition: "transform 0.3s ease",
               }}
               onMouseEnter={(e) =>
