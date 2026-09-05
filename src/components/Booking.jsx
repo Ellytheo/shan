@@ -950,24 +950,37 @@ const BookingModal = ({ open, onClose, preRoom = null, createdBy = 'website' }) 
                 >
                   {/* Back button (only in general flow) */}
                   {!directMode && (
-                    <button
+                    <motion.button
                       onClick={() => setSelectedRoom(null)}
-                      style={{
-                        background: "none",
-                        border: "none",
-                        color: "#4A6AA6",
-                        cursor: "pointer",
-                        fontSize: "0.88rem",
-                        fontWeight: 600,
-                        display: "flex",
-                        alignItems: "center",
-                        gap: 6,
-                        marginBottom: 20,
-                        padding: 0,
+                      whileHover={{
+                        x: -3,
+                        backgroundColor: "rgba(15, 143, 70, 0.12)",
+                        borderColor: "rgba(15, 143, 70, 0.35)",
+                        boxShadow: "0 4px 14px rgba(15, 143, 70, 0.15)",
                       }}
+                      whileTap={{ scale: 0.97 }}
+                      transition={{ duration: 0.2 }}
+                      style={{
+                        background: "rgba(15, 143, 70, 0.06)",
+                        border: "1px solid rgba(15, 143, 70, 0.2)",
+                        borderRadius: "30px",
+                        color: "#0F8F46",
+                        cursor: "pointer",
+                        fontSize: "0.9rem",
+                        fontWeight: 600,
+                        display: "inline-flex",
+                        alignItems: "center",
+                        gap: 8,
+                        marginBottom: 20,
+                        padding: "8px 18px",
+                        letterSpacing: "0.01em",
+                        boxShadow: "0 2px 8px rgba(0, 0, 0, 0.03)",
+                      }}
+                      aria-label="Back to available rooms"
                     >
-                      <i className="bi bi-arrow-left" /> Back to available rooms
-                    </button>
+                      <i className="bi bi-arrow-left" style={{ fontSize: "1.05rem" }} />
+                      <span>Back to Available Rooms</span>
+                    </motion.button>
                   )}
 
                   {/* Room hero banner */}
