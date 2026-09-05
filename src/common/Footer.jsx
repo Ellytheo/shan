@@ -287,9 +287,9 @@ const Footer = () => {
             Experience unparalleled comfort and authentic Kenyan warmth in Maragua, Murang’a County.
           </ContactText>
           <SocialLinks>
-            <a className="social-fb" href="https://www.facebook.com/search/top/?q=Shanvilla%20Resort%20KE"><FaFacebookF /></a>
-            <a className="social-ig" href="https://www.instagram.com/shanvillaresort/"><FaInstagram /></a>
-            <a className="social-tk" href="https://www.tiktok.com/discover/shanvilla-resort-in-maragua"><FaTiktok /></a>
+            <a className="social-fb" href="https://www.facebook.com/share/1FLvwNXYQj/?mibextid=wwXIfr" target="_blank" rel="noopener noreferrer" aria-label="Facebook"><FaFacebookF /></a>
+            <a className="social-ig" href="https://www.instagram.com/shanvillaresort?igsi=NTUycXljbHF1eXl6" target="_blank" rel="noopener noreferrer" aria-label="Instagram"><FaInstagram /></a>
+            <a className="social-tk" href="https://www.tiktok.com/@shanvilla.resort?_r=1&_t=ZS-992c3w32p6o" target="_blank" rel="noopener noreferrer" aria-label="TikTok"><FaTiktok /></a>
           </SocialLinks>
         </motion.div>
 
