@@ -2,6 +2,10 @@ import os
 import uuid
 import re
 import json
+import smtplib
+import threading
+from email.mime.text import MIMEText
+from email.mime.multipart import MIMEMultipart
 from functools import wraps
 from datetime import date, datetime,timedelta
 from decimal import Decimal
@@ -28,6 +32,141 @@ from PIL import Image
 import shutil
 
 app = Flask(__name__)
+
+# ---------------- Email Notification Configuration ----------------
+
+def send_booking_email_async(booking_data, room_name, total_price, reference):
+    def _send():
+        smtp_server = os.environ.get("SMTP_SERVER", "smtp.gmail.com")
+        smtp_port = int(os.environ.get("SMTP_PORT", 587))
+        smtp_user = os.environ.get("SMTP_EMAIL", "")
+        smtp_password = os.environ.get("SMTP_PASSWORD", "")
+        admin_email = os.environ.get("ADMIN_NOTIFICATION_EMAIL", "reception@shanvillaresortkenya.co.ke")
+
+        if not smtp_user or not smtp_password:
+            print("[Email Notification Warning] SMTP credentials not configured. Set SMTP_EMAIL & SMTP_PASSWORD in environment to enable email push notifications.")
+            return
+
+        try:
+            # 1. Email Notification to Admin / Reception Phone
+            admin_msg = MIMEMultipart("alternative")
+            admin_msg["From"] = f"Shanvilla Booking System <{smtp_user}>"
+            admin_msg["To"] = admin_email
+            admin_msg["Subject"] = f"🔔 NEW BOOKING: #{reference} - {booking_data['guest_name']}"
+
+            admin_plain = f"""
+            🔔 NEW BOOKING ALERT - SHANVILLA RESORT
+
+            Booking Ref: #{reference}
+            Guest Name:  {booking_data['guest_name']}
+            Phone:       {booking_data['phone']}
+            Email:       {booking_data['email']}
+
+            Room Type:   {room_name}
+            Check-in:    {booking_data['checkin_date']}
+            Check-out:   {booking_data['checkout_date']}
+            Guests:      {booking_data['guests']}
+            Meal Plan:   {booking_data.get('meal_plan', 'bedBreakfast')}
+            Total Price: KES {float(total_price):,.2f}
+            """
+
+            admin_html = f"""
+            <div style="font-family: Arial, sans-serif; max-width: 600px; padding: 20px; border: 1px solid #e0e0e0; border-radius: 12px; background-color: #ffffff;">
+              <h2 style="color: #0F8F46; margin-top: 0;">🔔 New Booking Alert</h2>
+              <p style="font-size: 15px; color: #333;">A new reservation has been made on the website.</p>
+              
+              <table style="width: 100%; border-collapse: collapse; margin-top: 15px;">
+                <tr><td style="padding: 10px; font-weight: bold; width: 130px; color: #555; border-bottom: 1px solid #eee;">Booking Ref:</td><td style="padding: 10px; font-weight: bold; color: #0F8F46; border-bottom: 1px solid #eee;">#{reference}</td></tr>
+                <tr style="background: #fdfdfd;"><td style="padding: 10px; font-weight: bold; color: #555; border-bottom: 1px solid #eee;">Guest Name:</td><td style="padding: 10px; color: #111; border-bottom: 1px solid #eee;">{booking_data['guest_name']}</td></tr>
+                <tr><td style="padding: 10px; font-weight: bold; color: #555; border-bottom: 1px solid #eee;">Phone:</td><td style="padding: 10px; border-bottom: 1px solid #eee;"><a href="tel:{booking_data['phone']}" style="color: #0F8F46; font-weight: bold; text-decoration: none;">{booking_data['phone']} (Tap to Call)</a></td></tr>
+                <tr style="background: #fdfdfd;"><td style="padding: 10px; font-weight: bold; color: #555; border-bottom: 1px solid #eee;">Email:</td><td style="padding: 10px; border-bottom: 1px solid #eee;"><a href="mailto:{booking_data['email']}" style="color: #0F8F46; text-decoration: none;">{booking_data['email']}</a></td></tr>
+                <tr><td style="padding: 10px; font-weight: bold; color: #555; border-bottom: 1px solid #eee;">Room Type:</td><td style="padding: 10px; color: #111; border-bottom: 1px solid #eee;">{room_name}</td></tr>
+                <tr style="background: #fdfdfd;"><td style="padding: 10px; font-weight: bold; color: #555; border-bottom: 1px solid #eee;">Stay Dates:</td><td style="padding: 10px; color: #111; border-bottom: 1px solid #eee;">{booking_data['checkin_date']} &rarr; {booking_data['checkout_date']}</td></tr>
+                <tr><td style="padding: 10px; font-weight: bold; color: #555; border-bottom: 1px solid #eee;">Guests &amp; Plan:</td><td style="padding: 10px; color: #111; border-bottom: 1px solid #eee;">{booking_data['guests']} Guest(s) | {booking_data.get('meal_plan', 'B&B')}</td></tr>
+                <tr style="background: #f0fdf4;"><td style="padding: 12px; font-weight: bold; color: #0F8F46;">Total Price:</td><td style="padding: 12px; font-weight: bold; color: #0F8F46; font-size: 1.15rem;">KES {float(total_price):,.2f}</td></tr>
+              </table>
+            </div>
+            """
+
+            admin_msg.attach(MIMEText(admin_plain, "plain"))
+            admin_msg.attach(MIMEText(admin_html, "html"))
+
+            with smtplib.SMTP(smtp_server, smtp_port, timeout=12) as server:
+                server.starttls()
+                server.login(smtp_user, smtp_password)
+                server.send_message(admin_msg)
+
+                # 2. Confirmation Email to Guest
+                if booking_data.get("email"):
+                    guest_msg = MIMEMultipart("alternative")
+                    guest_msg["From"] = f"Shanvilla Resort <{smtp_user}>"
+                    guest_msg["To"] = booking_data["email"]
+                    guest_msg["Subject"] = f"Booking Confirmation #{reference} - Shanvilla Resort"
+
+                    guest_html = f"""
+                    <div style="font-family: Arial, sans-serif; max-width: 600px; padding: 20px; border: 1px solid #e0e0e0; border-radius: 12px;">
+                      <h2 style="color: #0F8F46;">Thank You For Choosing Shanvilla Resort!</h2>
+                      <p>Dear {booking_data['guest_name']},</p>
+                      <p>We have successfully received your booking. Here is your reservation summary:</p>
+                      
+                      <div style="background: #FAF5EF; padding: 16px; border-radius: 10px; margin: 15px 0;">
+                        <p style="margin: 6px 0;"><strong>Booking Reference:</strong> #{reference}</p>
+                        <p style="margin: 6px 0;"><strong>Room Type:</strong> {room_name}</p>
+                        <p style="margin: 6px 0;"><strong>Check-in:</strong> {booking_data['checkin_date']}</p>
+                        <p style="margin: 6px 0;"><strong>Check-out:</strong> {booking_data['checkout_date']}</p>
+                        <p style="margin: 6px 0;"><strong>Total Price:</strong> KES {float(total_price):,.2f}</p>
+                      </div>
+
+                      <p>If you have any special requests or questions, please feel free to call us at <strong>+254 111427894</strong> or email reception@shanvillaresortkenya.co.ke.</p>
+                      <p style="color: #666; font-size: 13px; margin-top: 25px;">Shanvilla Resort Ltd, Maragua, Murang’a County, Kenya</p>
+                    </div>
+                    """
+                    guest_msg.attach(MIMEText(guest_html, "html"))
+                    server.send_message(guest_msg)
+
+            print(f"[Email Notification] Successfully dispatched booking emails for #{reference}")
+        except Exception as e:
+            print(f"[Email Notification Error] Failed to send email for booking #{reference}: {e}")
+
+    threading.Thread(target=_send, daemon=True).start()
+
+def send_contact_email_async(contact_data):
+    def _send():
+        smtp_server = os.environ.get("SMTP_SERVER", "smtp.gmail.com")
+        smtp_port = int(os.environ.get("SMTP_PORT", 587))
+        smtp_user = os.environ.get("SMTP_EMAIL", "")
+        smtp_password = os.environ.get("SMTP_PASSWORD", "")
+        admin_email = os.environ.get("ADMIN_NOTIFICATION_EMAIL", "reception@shanvillaresortkenya.co.ke")
+
+        if not smtp_user or not smtp_password:
+            return
+
+        try:
+            msg = MIMEMultipart("alternative")
+            msg["From"] = f"Shanvilla Contact Form <{smtp_user}>"
+            msg["To"] = admin_email
+            msg["Subject"] = f"📩 New Inquiry: {contact_data['first_name']} {contact_data['last_name']}"
+
+            html = f"""
+            <div style="font-family: Arial, sans-serif; padding: 20px; border: 1px solid #ddd; border-radius: 10px;">
+              <h3 style="color: #0F8F46;">📩 New Contact Form Inquiry</h3>
+              <p><strong>Name:</strong> {contact_data['first_name']} {contact_data['last_name']}</p>
+              <p><strong>Phone:</strong> <a href="tel:{contact_data['phone']}" style="color: #0F8F46; font-weight: bold;">{contact_data['phone']}</a></p>
+              <p><strong>Email:</strong> <a href="mailto:{contact_data['email']}">{contact_data['email']}</a></p>
+              <p><strong>Message:</strong></p>
+              <blockquote style="background: #f9f9f9; padding: 12px; border-left: 4px solid #0F8F46; margin: 10px 0;">{contact_data['message']}</blockquote>
+            </div>
+            """
+            msg.attach(MIMEText(html, "html"))
+            with smtplib.SMTP(smtp_server, smtp_port, timeout=12) as server:
+                server.starttls()
+                server.login(smtp_user, smtp_password)
+                server.send_message(msg)
+            print(f"[Contact Notification] Email sent for {contact_data['first_name']} {contact_data['last_name']}")
+        except Exception as e:
+            print(f"[Contact Notification Error] {e}")
+
+    threading.Thread(target=_send, daemon=True).start()
 
 # ---------------- JWT Configuration ----------------
 
@@ -406,6 +545,13 @@ def submit_contact():
                 VALUES (%s, %s, %s, %s, %s)
             """, (data["first_name"], data["last_name"], data["email"], data["phone"], data["message"]))
         conn.commit()
+        send_contact_email_async({
+            "first_name": data.get("first_name", ""),
+            "last_name": data.get("last_name", ""),
+            "email": data.get("email", ""),
+            "phone": data.get("phone", ""),
+            "message": data.get("message", "")
+        })
         return jsonify({"status": "success", "message": "Contact form submitted successfully."}), 201
     except Exception as e:
         if conn:
@@ -929,6 +1075,12 @@ def create_booking():
             booking = cursor.fetchone()
 
         conn.commit()
+        send_booking_email_async(
+            booking_data=data,
+            room_name=room.get("name", "Shanvilla Suite"),
+            total_price=total_price,
+            reference=reference
+        )
         return jsonify({
             "status": "success",
             "message": "Booking created successfully.",
