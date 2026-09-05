@@ -239,13 +239,15 @@ const MODAL_CSS = `
     margin-bottom: 10px;
   }
   .sv-bk-avail-card-avail {
-    display: inline-block;
-    background: rgba(15,143,70,0.08);
-    color: #0F8F46;
+    display: inline-flex;
+    align-items: center;
+    background: rgba(239, 68, 68, 0.1);
+    color: #DC2626;
+    border: 1px solid rgba(239, 68, 68, 0.25);
     border-radius: 20px;
-    padding: 2px 10px;
-    font-size: 0.75rem;
-    font-weight: 600;
+    padding: 3px 12px;
+    font-size: 0.78rem;
+    font-weight: 700;
     margin-bottom: 10px;
   }
   .sv-bk-avail-card-avail.sold-out {
@@ -703,10 +705,12 @@ const BookingModal = ({ open, onClose, preRoom = null, createdBy = 'website' }) 
           (r) => r.name.toLowerCase() === apiRoom.name?.toLowerCase() || r.id === apiRoom.id
         );
         const rId = apiRoom.id || local?.id;
+        const count = apiRoom.available ?? apiRoom.available_rooms ?? local?.available ?? 0;
         return {
           ...apiRoom,
           id: rId,
           name: apiRoom.name || local?.name,
+          available: count,
           image: local?.image || apiRoom.image || null,
           description: local?.description || apiRoom.description || "",
           pricing: apiRoom.pricing || local?.pricing || null,
@@ -917,6 +921,7 @@ const BookingModal = ({ open, onClose, preRoom = null, createdBy = 'website' }) 
                       <div className="sv-bk-avail-grid">
                         {availRooms.map((room) => {
                           const nightRate = getRoomRate(room, searchData?.guests);
+                          const availCount = typeof room.available === 'number' ? room.available : (room.available_rooms ?? 0);
                           return (
                             <div key={room.id} className="sv-bk-avail-card">
                               {room.image && <img src={room.image} alt={room.name} />}
@@ -926,16 +931,16 @@ const BookingModal = ({ open, onClose, preRoom = null, createdBy = 'website' }) 
                                 <div className="sv-bk-avail-card-price">
                                   KES {nightRate.toLocaleString()} / night
                                 </div>
-                                <div className={`sv-bk-avail-card-avail ${room.available <= 0 ? 'sold-out' : ''}`}>
-                                  <i className={`bi ${room.available <= 0 ? 'bi-x-circle-fill' : 'bi-check-circle-fill'}`} style={{ marginRight: 4 }} />
-                                  {room.available <= 0 ? "No Rooms Available" : `${room.available} ${room.available === 1 ? "Room" : "Rooms"} Available`}
+                                <div className={`sv-bk-avail-card-avail ${availCount <= 0 ? 'sold-out' : ''}`}>
+                                  <i className={`bi ${availCount <= 0 ? 'bi-x-circle-fill' : 'bi-check-circle-fill'}`} style={{ marginRight: 4 }} />
+                                  {availCount <= 0 ? "No Rooms Available" : `${availCount} ${availCount === 1 ? "Room" : "Rooms"} Available`}
                                 </div>
                                 <button
                                   className="sv-bk-avail-reserve-btn"
-                                  disabled={room.available <= 0}
+                                  disabled={availCount <= 0}
                                   onClick={() => setSelectedRoom(room)}
                                 >
-                                  {room.available > 0 ? "Reserve Now" : "Sold Out"}
+                                  {availCount > 0 ? "Reserve Now" : "Sold Out"}
                                 </button>
                               </div>
                             </div>
