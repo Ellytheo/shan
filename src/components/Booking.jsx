@@ -248,6 +248,12 @@ const MODAL_CSS = `
     font-weight: 600;
     margin-bottom: 10px;
   }
+  .sv-bk-avail-card-avail.sold-out {
+    background: linear-gradient(135deg, #FF1744 0%, #D50000 100%);
+    color: #ffffff;
+    font-weight: 700;
+    box-shadow: 0 4px 12px rgba(213, 0, 0, 0.35);
+  }
   .sv-bk-avail-reserve-btn {
     width: 100%;
     padding: 9px 0;
@@ -920,9 +926,9 @@ const BookingModal = ({ open, onClose, preRoom = null, createdBy = 'website' }) 
                                 <div className="sv-bk-avail-card-price">
                                   KES {nightRate.toLocaleString()} / night
                                 </div>
-                                <div className="sv-bk-avail-card-avail">
-                                  <i className="bi bi-check-circle-fill" style={{ marginRight: 4 }} />
-                                  {room.available} {room.available === 1 ? "Room" : "Rooms"} Available
+                                <div className={`sv-bk-avail-card-avail ${room.available <= 0 ? 'sold-out' : ''}`}>
+                                  <i className={`bi ${room.available <= 0 ? 'bi-x-circle-fill' : 'bi-check-circle-fill'}`} style={{ marginRight: 4 }} />
+                                  {room.available <= 0 ? "No Rooms Available" : `${room.available} ${room.available === 1 ? "Room" : "Rooms"} Available`}
                                 </div>
                                 <button
                                   className="sv-bk-avail-reserve-btn"

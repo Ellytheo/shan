@@ -168,8 +168,15 @@ const AvailabilityBadge = ({ count, loading }) => {
   }
   if (count <= 0) {
     return (
-      <span style={{ ...styles.badge, background: 'rgba(150,150,150,0.18)', borderColor: 'rgba(150,150,150,0.35)', color: '#555' }}>
-        <i className="bi bi-x-circle-fill" style={{ marginRight: 5, color: '#888' }} />
+      <span style={{
+        ...styles.badge,
+        background: 'linear-gradient(135deg, #FF1744 0%, #D50000 100%)',
+        borderColor: '#FF5252',
+        color: '#FFFFFF',
+        fontWeight: 700,
+        boxShadow: '0 4px 14px rgba(213, 0, 0, 0.45)',
+      }}>
+        <i className="bi bi-x-circle-fill" style={{ marginRight: 5, color: '#FFFFFF' }} />
         No Rooms Available
       </span>
     );
