@@ -924,16 +924,33 @@ const BookingModal = ({ open, onClose, preRoom = null, createdBy = 'website' }) 
                           const availCount = typeof room.available === 'number' ? room.available : (room.available_rooms ?? 0);
                           return (
                             <div key={room.id} className="sv-bk-avail-card">
-                              {room.image && <img src={room.image} alt={room.name} />}
+                              <div style={{ position: 'relative' }}>
+                                {room.image && <img src={room.image} alt={room.name} style={{ width: '100%', height: '140px', objectFit: 'cover', display: 'block' }} />}
+                                <div style={{ position: 'absolute', top: 10, right: 10, zIndex: 2 }}>
+                                  <span style={{
+                                    display: 'inline-flex',
+                                    alignItems: 'center',
+                                    gap: 4,
+                                    padding: '4px 10px',
+                                    borderRadius: 20,
+                                    fontSize: '0.75rem',
+                                    fontWeight: 700,
+                                    backdropFilter: 'blur(6px)',
+                                    background: availCount <= 0 ? 'linear-gradient(135deg, #FF1744 0%, #D50000 100%)' : 'rgba(239, 68, 68, 0.92)',
+                                    color: '#FFFFFF',
+                                    border: availCount <= 0 ? '1px solid #FF5252' : '1px solid rgba(255, 255, 255, 0.4)',
+                                    boxShadow: '0 2px 10px rgba(0,0,0,0.3)',
+                                  }}>
+                                    <i className={`bi ${availCount <= 0 ? 'bi-x-circle-fill' : 'bi-check-circle-fill'}`} style={{ marginRight: 2, color: '#FFFFFF' }} />
+                                    {availCount <= 0 ? "No Rooms Available" : `${availCount} ${availCount === 1 ? "Room" : "Rooms"} Available`}
+                                  </span>
+                                </div>
+                              </div>
                               <div className="sv-bk-avail-card-body">
                                 <h4>{room.name}</h4>
                                 {room.description && <p>{room.description}</p>}
                                 <div className="sv-bk-avail-card-price">
                                   KES {nightRate.toLocaleString()} / night
-                                </div>
-                                <div className={`sv-bk-avail-card-avail ${availCount <= 0 ? 'sold-out' : ''}`}>
-                                  <i className={`bi ${availCount <= 0 ? 'bi-x-circle-fill' : 'bi-check-circle-fill'}`} style={{ marginRight: 4 }} />
-                                  {availCount <= 0 ? "No Rooms Available" : `${availCount} ${availCount === 1 ? "Room" : "Rooms"} Available`}
                                 </div>
                                 <button
                                   className="sv-bk-avail-reserve-btn"
