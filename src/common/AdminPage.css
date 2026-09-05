@@ -1188,9 +1188,9 @@ html {
   box-shadow: 0 2px 10px rgba(0,0,0,0.08);
 }
 .room-avail-badge--green {
-  background: rgba(16,185,129,0.08);
+  background: rgba(239, 68, 68, 0.12);
   color: #DC2626;
-  border: 1px solid rgba(16,185,129,0.2);
+  border: 1px solid rgba(239, 68, 68, 0.3);
 }
 .room-avail-badge--red {
   background: rgba(239,68,68,0.08);
