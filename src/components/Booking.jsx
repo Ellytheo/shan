@@ -927,23 +927,44 @@ const BookingModal = ({ open, onClose, preRoom = null, createdBy = 'website' }) 
                               <div style={{ position: 'relative' }}>
                                 {room.image && <img src={room.image} alt={room.name} style={{ width: '100%', height: '140px', objectFit: 'cover', display: 'block' }} />}
                                 <div style={{ position: 'absolute', top: 10, right: 10, zIndex: 2 }}>
-                                  <span style={{
-                                    display: 'inline-flex',
-                                    alignItems: 'center',
-                                    gap: 4,
-                                    padding: '4px 10px',
-                                    borderRadius: 20,
-                                    fontSize: '0.75rem',
-                                    fontWeight: 700,
-                                    backdropFilter: 'blur(6px)',
-                                    background: availCount <= 0 ? 'linear-gradient(135deg, #FF1744 0%, #D50000 100%)' : 'rgba(239, 68, 68, 0.92)',
-                                    color: '#FFFFFF',
-                                    border: availCount <= 0 ? '1px solid #FF5252' : '1px solid rgba(255, 255, 255, 0.4)',
-                                    boxShadow: '0 2px 10px rgba(0,0,0,0.3)',
-                                  }}>
-                                    <i className={`bi ${availCount <= 0 ? 'bi-x-circle-fill' : 'bi-check-circle-fill'}`} style={{ marginRight: 2, color: '#FFFFFF' }} />
-                                    {availCount <= 0 ? "No Rooms Available" : `${availCount} ${availCount === 1 ? "Room" : "Rooms"} Available`}
-                                  </span>
+                                  {availCount <= 0 ? (
+                                    <span style={{
+                                      display: 'inline-flex',
+                                      alignItems: 'center',
+                                      background: 'linear-gradient(135deg, #FF1744 0%, #D50000 100%)',
+                                      backdropFilter: 'blur(10px)',
+                                      color: '#FFFFFF',
+                                      fontSize: '0.8rem',
+                                      fontWeight: 700,
+                                      padding: '4px 12px',
+                                      borderRadius: 40,
+                                      border: '1px solid #FF5252',
+                                      letterSpacing: '0.04em',
+                                      whiteSpace: 'nowrap',
+                                      boxShadow: '0 4px 14px rgba(213, 0, 0, 0.45)',
+                                    }}>
+                                      <i className="bi bi-x-circle-fill" style={{ marginRight: 5, color: '#FFFFFF' }} />
+                                      No Rooms Available
+                                    </span>
+                                  ) : (
+                                    <span style={{
+                                      display: 'inline-flex',
+                                      alignItems: 'center',
+                                      background: 'rgba(224, 59, 59, 0.1)',
+                                      backdropFilter: 'blur(10px)',
+                                      color: '#f70808',
+                                      fontSize: '0.8rem',
+                                      fontWeight: 700,
+                                      padding: '4px 12px',
+                                      borderRadius: 40,
+                                      border: '1px solid rgba(224,59,59,0.3)',
+                                      letterSpacing: '0.04em',
+                                      whiteSpace: 'nowrap',
+                                    }}>
+                                      <i className="bi bi-check-circle-fill" style={{ marginRight: 5, color: '#f80808' }} />
+                                      {availCount} {availCount === 1 ? 'Room' : 'Rooms'} Available
+                                    </span>
+                                  )}
                                 </div>
                               </div>
                               <div className="sv-bk-avail-card-body">
