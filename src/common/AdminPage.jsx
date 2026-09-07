@@ -1010,8 +1010,23 @@ const AdminPage = () => {
                           <div style={{ height:'100%', width:`${occupancyPct}%`, background: occupancyPct > 80 ? '#EF4444' : occupancyPct > 50 ? '#F59E0B' : '#10B981', transition:'width 0.6s ease' }} />
                         </div>
                         <div style={{ position: 'absolute', top: 12, right: 12 }}>
-                          <span className={`room-avail-badge ${availCount > 0 ? 'room-avail-badge--green' : 'room-avail-badge--red'}`}>
-                            {inMaint ? '🔧 Blocked' : `${availCount} Available`}
+                          <span className={`room-avail-badge ${!inMaint && availCount > 0 ? 'room-avail-badge--green' : 'room-avail-badge--red'}`}>
+                            {inMaint ? (
+                              <>
+                                <i className="bi bi-tools" style={{ marginRight: 5, color: '#FFFFFF' }} />
+                                Blocked
+                              </>
+                            ) : availCount > 0 ? (
+                              <>
+                                <i className="bi bi-check-circle-fill" style={{ marginRight: 5, color: '#f80808' }} />
+                                {availCount} {availCount === 1 ? 'Room' : 'Rooms'} Available
+                              </>
+                            ) : (
+                              <>
+                                <i className="bi bi-x-circle-fill" style={{ marginRight: 5, color: '#FFFFFF' }} />
+                                No Rooms Available
+                              </>
+                            )}
                           </span>
                         </div>
                         {inMaint && (
