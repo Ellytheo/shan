@@ -1086,7 +1086,7 @@ const BookingModal = ({ open, onClose, preRoom = null, createdBy = 'website' }) 
 
                     {/* Meal Plan Selector (rendered in both direct mode and general mode) */}
                     <div style={{ marginBottom: 24 }}>
-                      <div style={{ fontFamily: "'Inter', sans-serif", fontSize: '0.88rem', marginBottom: 8, color: '#1C2A3A' }}>Meal Plan</div>
+                      <div style={{ fontFamily: "'Inter', sans-serif", fontSize: '0.88rem', marginBottom: 8, color: '#1C2A3A' }}>Please pick your meal plan below?</div>
                       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(95px, 1fr))', gap: '8px' }}>
                         {['bedBreakfast', 'halfBoard', 'fullBoard'].map((plan) => {
                           const p = bookingRoom?.pricing || bookingRoom?.price_details;
