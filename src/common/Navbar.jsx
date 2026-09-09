@@ -373,10 +373,23 @@ const NAV_ITEMS = [
 ];
 // Note: "booking" is intentionally removed — it now lives in the modal
 
+const getInitialSection = () => {
+  const hash = window.location.hash.replace(/^#/, "");
+  const validIds = NAV_ITEMS.map((item) => item.id);
+  if (hash && validIds.includes(hash)) {
+    return hash;
+  }
+  const saved = sessionStorage.getItem("activeSection");
+  if (saved && validIds.includes(saved)) {
+    return saved;
+  }
+  return "home";
+};
+
 // ─── component ───────────────────────────────────────────────────────────────
 const Navbar = () => {
   const [open, setOpen] = useState(false);
-  const [active, setActive] = useState("home");
+  const [active, setActive] = useState(getInitialSection);
   const [bookingOpen, setBookingOpen] = useState(false);
   const [preRoom, setPreRoom] = useState(null);
   const styleRef = useRef(null);
@@ -412,27 +425,66 @@ const Navbar = () => {
     return 78;
   };
 
+  // Restore scroll position to active section on initial page load / refresh
+  useEffect(() => {
+    if (window.location.pathname !== "/") return;
+
+    const initialId = getInitialSection();
+    if (initialId && initialId !== "home") {
+      const scrollToTarget = () => {
+        const el = document.getElementById(initialId);
+        if (el) {
+          const navbarHeight = getNavbarHeight();
+          const elementPosition = el.getBoundingClientRect().top + window.scrollY;
+          const offsetPosition = elementPosition - navbarHeight;
+          window.scrollTo({
+            top: offsetPosition,
+            behavior: "instant",
+          });
+        }
+      };
+
+      scrollToTarget();
+      const t1 = setTimeout(scrollToTarget, 50);
+      const t2 = setTimeout(scrollToTarget, 200);
+      const t3 = setTimeout(scrollToTarget, 500);
+
+      return () => {
+        clearTimeout(t1);
+        clearTimeout(t2);
+        clearTimeout(t3);
+      };
+    }
+  }, []);
+
   // scroll spy
   useEffect(() => {
     const ids = NAV_ITEMS.map((i) => i.id);
     const handleScroll = () => {
       // Check if we've scrolled to the bottom of the page
       const isAtBottom = window.innerHeight + window.scrollY >= document.documentElement.scrollHeight - 10;
-      if (isAtBottom) {
-        setActive(ids[ids.length - 1]);
-        return;
-      }
-
-      const navbarHeight = getNavbarHeight();
-      const offset = window.scrollY + navbarHeight + 15; // 15px buffer to guarantee section is active
       let current = ids[0];
-      for (const id of ids) {
-        const el = document.getElementById(id);
-        if (el && el.offsetTop <= offset) {
-          current = id;
+      if (isAtBottom) {
+        current = ids[ids.length - 1];
+      } else {
+        const navbarHeight = getNavbarHeight();
+        const offset = window.scrollY + navbarHeight + 15; // 15px buffer to guarantee section is active
+        for (const id of ids) {
+          const el = document.getElementById(id);
+          if (el && el.offsetTop <= offset) {
+            current = id;
+          }
         }
       }
       setActive(current);
+      sessionStorage.setItem("activeSection", current);
+
+      if (window.location.pathname === "/") {
+        const currentHash = window.location.hash.replace(/^#/, "");
+        if (currentHash !== current) {
+          window.history.replaceState(null, null, `/#${current}`);
+        }
+      }
     };
     window.addEventListener("scroll", handleScroll, { passive: true });
     handleScroll();
@@ -446,6 +498,9 @@ const Navbar = () => {
     }
     
     e.preventDefault();
+
+    setActive(id);
+    sessionStorage.setItem("activeSection", id);
 
     // Update url hash without refreshing the page
     window.history.pushState(null, null, `/#${id}`);
