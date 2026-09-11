@@ -67,7 +67,7 @@ const WhatsAppWidget = () => {
 const styles = {
   container: {
     position: "fixed",
-    bottom: 24,
+    bottom: 90,
     right: 24,
     zIndex: 2000,
     display: "flex",
