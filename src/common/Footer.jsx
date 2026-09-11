@@ -344,6 +344,13 @@ const Footer = () => {
           <FooterLink href="/terms">Privacy</FooterLink>
           <FooterLink href="/terms">Terms</FooterLink>
           <FooterLink href="/#home">Sitemap</FooterLink>
+          <FooterLink
+            href="https://wa.me/254742682580?text=Hello%2C%20I%27d%20like%20to%20contact%20the%20developer%20of%20the%20Shanvilla%20Resort%20website."
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            Contact Developer
+          </FooterLink>
         </div>
       </BottomRow>
     </FooterContainer>
