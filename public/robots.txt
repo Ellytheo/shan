@@ -1,3 +1,21 @@
-# https://www.robotstxt.org/robotstxt.html
+# Robots.txt for Shanvilla Resort (https://shanvilla.co.ke)
 User-agent: *
-Disallow:
+
+# Block search engines from crawling admin, login, and internal routes
+Disallow: /wp-adman
+Disallow: /wp-adman/
+Disallow: /sponge
+Disallow: /sponge/
+Disallow: /admin
+Disallow: /admin/
+Disallow: /wp-admin
+Disallow: /wp-admin/
+Disallow: /api/
+
+# Allow crawling of all public routes and assets
+Allow: /
+Allow: /terms
+Allow: /assets/
+
+# Sitemap location
+Sitemap: https://shanvilla.co.ke/sitemap.xml

@@ -3,8 +3,10 @@ import { useNavigate } from 'react-router-dom';
 import { Form, Input, Button, Card, message } from 'antd';
 import { motion } from 'framer-motion';
 import { useAuth } from '../context/AuthContext';
+import useNoIndex from '../hooks/useNoIndex';
 
 const Login = () => {
+  useNoIndex();
   const { login, isLoading, user } = useAuth();
   const navigate = useNavigate();
 

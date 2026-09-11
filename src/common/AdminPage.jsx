@@ -6,6 +6,7 @@ import {
   Timeline, Form, Modal, Tag, Spin, Upload, Progress,
 } from 'antd';
 import { useAuth } from '../context/AuthContext';
+import useNoIndex from '../hooks/useNoIndex';
 import { motion, AnimatePresence } from 'framer-motion';
 import dayjs from 'dayjs';
 import isBetween from 'dayjs/plugin/isBetween';
@@ -77,6 +78,7 @@ const STATUS_ACTIONS = {
 
 /* ─────────────────────────────────────── */
 const AdminPage = () => {
+  useNoIndex();
   const [view, setView]           = useState(() => localStorage.getItem('adminActiveView') || 'dashboard');
   const [contacts, setContacts]   = useState([]);
   const [bookings, setBookings]   = useState([]);
