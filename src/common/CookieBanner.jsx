@@ -7,8 +7,11 @@ const CookieBanner = () => {
 
   const initGA = () => {
     try {
-      ReactGA.initialize("G-XXXXXXXXXX"); // ✅ Replace with your GA4 ID
-      ReactGA.send("pageview");
+      const gaId = import.meta.env.VITE_GA_MEASUREMENT_ID;
+      if (gaId && gaId !== "G-XXXXXXXXXX") {
+        ReactGA.initialize(gaId);
+        ReactGA.send("pageview");
+      }
     } catch (e) {
       if (import.meta.env.DEV) console.warn("GA initialization failed", e);
     }

@@ -22,6 +22,8 @@ import ProtectedRoute from './common/ProtectedRoute';
 import { AuthProvider } from './context/AuthContext';
 import ErrorBoundary from './common/ErrorBoundary';
 import NotFound from './components/NotFound';
+import { Analytics } from '@vercel/analytics/react';
+import { SpeedInsights } from '@vercel/speed-insights/react';
 
 function AppContent() {
   return (
@@ -68,6 +70,8 @@ function App() {
           </BrowserRouter>
         </RoomAvailabilityProvider>
       </ThemeProvider>
+      <Analytics />
+      <SpeedInsights />
     </ErrorBoundary>
   );
 }
