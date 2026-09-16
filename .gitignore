@@ -28,3 +28,9 @@ dist-ssr
 
 
 .vercel
+
+# Python / Backend
+shanvilla_backend.py
+*.py
+*.pyc
+__pycache__/
