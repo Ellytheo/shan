@@ -230,7 +230,9 @@ CORS(
     origins=[
         "http://localhost:3000",
         "http://localhost:5173",
-        "https://shanvilla-vite.vercel.app"
+        "https://shanvilla-vite.vercel.app",
+        "https://shanvilla.co.ke",
+        "https://www.shanvilla.co.ke"
     ]
 )
 
