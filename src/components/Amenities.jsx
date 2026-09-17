@@ -22,6 +22,14 @@ const VideoSectionContainer = styled.section`
   display: flex;
   justify-content: center;
   align-items: center;
+
+  @media (max-width: 768px) {
+    padding: 10px 12px;
+  }
+
+  @media (max-width: 480px) {
+    padding: 8px 8px;
+  }
 `;
 
 const VideoWrapper = styled.div`
@@ -30,14 +38,33 @@ const VideoWrapper = styled.div`
   border-radius: 16px;
   overflow: hidden;
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.25);
+
+  @media (max-width: 768px) {
+    border-radius: 12px;
+  }
+
+  @media (max-width: 480px) {
+    border-radius: 8px;
+    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.2);
+  }
 `;
 
 const VideoElement = styled.video`
   width: 100%;
-  max-height: 600px;
+  max-height: 380px;
   border-radius: 16px;
   object-fit: cover;
   display: block;
+
+  @media (max-width: 768px) {
+    max-height: 300px;
+    border-radius: 12px;
+  }
+
+  @media (max-width: 480px) {
+    max-height: 220px;
+    border-radius: 8px;
+  }
 `;
 
 // Make sure to import your custom CSS (amenity-card, testimonial-section, etc.)
