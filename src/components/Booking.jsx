@@ -727,7 +727,7 @@ const BookingModal = ({ open, onClose, preRoom = null, createdBy = 'website' }) 
       });
 
       if (suitableRooms.length === 0) {
-        message.info(`No rooms available for ${numGuests} guest${numGuests !== 1 ? 's' : ''} on the selected dates.`);
+        message.info(`Fully booked for ${numGuests} guest${numGuests !== 1 ? 's' : ''} on the selected dates.`);
       }
       setAvailRooms(suitableRooms);
     } catch (err) {
@@ -944,7 +944,7 @@ const BookingModal = ({ open, onClose, preRoom = null, createdBy = 'website' }) 
                                       boxShadow: '0 4px 14px rgba(213, 0, 0, 0.45)',
                                     }}>
                                       <i className="bi bi-x-circle-fill" style={{ marginRight: 5, color: '#FFFFFF' }} />
-                                      No Rooms Available
+                                      Fully Booked
                                     </span>
                                   ) : (
                                     <span style={{
@@ -978,7 +978,7 @@ const BookingModal = ({ open, onClose, preRoom = null, createdBy = 'website' }) 
                                   disabled={availCount <= 0}
                                   onClick={() => setSelectedRoom(room)}
                                 >
-                                  {availCount > 0 ? "Reserve Now" : "Sold Out"}
+                                  {availCount > 0 ? "Reserve Now" : "Fully Booked"}
                                 </button>
                               </div>
                             </div>

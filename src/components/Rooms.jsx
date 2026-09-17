@@ -177,7 +177,7 @@ const AvailabilityBadge = ({ count, loading }) => {
         boxShadow: '0 4px 14px rgba(213, 0, 0, 0.45)',
       }}>
         <i className="bi bi-x-circle-fill" style={{ marginRight: 5, color: '#FFFFFF' }} />
-        No Rooms Available
+        Fully Booked
       </span>
     );
   }
@@ -405,15 +405,22 @@ const RoomModal = ({ room, visible, onClose, liveCount }) => {
                 else if (guestCount === 1 && p.single) currentTier = p.single;
                 else currentTier = p.double || p.single || p.triple || p;
 
+                const orderedPlans = ['bedBreakfast', 'halfBoard', 'fullBoard'].filter(
+                  (plan) => currentTier && currentTier[plan] !== undefined
+                );
+
                 return (
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
                     <div className="shanvilla-pricing-grid" style={styles.modalPricingGrid}>
-                      {Object.entries(currentTier).map(([plan, price]) => (
-                        <div key={plan} style={styles.modalPricingCard}>
-                          <span style={styles.modalPricingLabel}>{PLAN_LABELS[plan] || plan}</span>
-                          <span style={styles.modalPricingAmount}>KES {typeof price === 'number' ? price.toLocaleString() : price}</span>
-                        </div>
-                      ))}
+                      {orderedPlans.map((plan) => {
+                        const price = currentTier[plan];
+                        return (
+                          <div key={plan} style={styles.modalPricingCard}>
+                            <span style={styles.modalPricingLabel}>{PLAN_LABELS[plan] || plan}</span>
+                            <span style={styles.modalPricingAmount}>KES {typeof price === 'number' ? price.toLocaleString() : price}</span>
+                          </div>
+                        );
+                      })}
                     </div>
                   </div>
                 );
@@ -424,7 +431,7 @@ const RoomModal = ({ room, visible, onClose, liveCount }) => {
               <div style={{ display: 'flex', justifyContent: 'center', marginTop: 32, width: '100%' }}>
                 {soldOut ? (
                   <div className="shanvilla-modal-book-btn" style={{ ...styles.modalBookBtn, background: '#ccc', cursor: 'not-allowed', opacity: 0.6, textAlign: 'center' }}>
-                    No Rooms Available
+                    Fully Booked
                   </div>
                 ) : (
                   <motion.button

@@ -1026,7 +1026,7 @@ const AdminPage = () => {
                             ) : (
                               <>
                                 <i className="bi bi-x-circle-fill" style={{ marginRight: 5, color: '#FFFFFF' }} />
-                                No Rooms Available
+                                Fully Booked
                               </>
                             )}
                           </span>
