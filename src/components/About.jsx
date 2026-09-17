@@ -398,7 +398,7 @@ const About = () => {
                       playsInline
                       disablePictureInPicture
                       disableRemotePlayback
-                      preload="none"
+                      preload="metadata"
                     >
                       Your browser does not support the video tag.
                     </VideoElement>
