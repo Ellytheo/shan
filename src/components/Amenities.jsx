@@ -1,4 +1,5 @@
 
+import { useRef, useEffect } from "react";
 import { Carousel } from "antd";
 import styled from "styled-components";
 import {
@@ -42,6 +43,31 @@ const VideoElement = styled.video`
 // Make sure to import your custom CSS (amenity-card, testimonial-section, etc.)
 
 const Amenities = () => {
+  const gardenVideoRef = useRef(null);
+
+  useEffect(() => {
+    const video = gardenVideoRef.current;
+    if (!video) return;
+
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          // Set the src only when in view to trigger the actual download
+          if (!video.src) {
+            video.src = '/videos/garden.mp4';
+            video.load();
+          }
+          video.play().catch(() => {});
+          observer.disconnect(); // Only need to trigger once
+        }
+      },
+      { threshold: 0.25 }
+    );
+
+    observer.observe(video);
+    return () => observer.disconnect();
+  }, []);
+
   return (
     <>
       {/* Amenities Section */}
@@ -131,17 +157,16 @@ const Amenities = () => {
         </div>
       </section>
 
-      {/* Garden Video Section */}
+      {/* Garden Video Section — lazy-loaded via IntersectionObserver */}
       <VideoSectionContainer>
         <VideoWrapper>
           <VideoElement
-            src="/videos/garden.mp4"
+            ref={gardenVideoRef}
             muted
-            autoPlay
             loop
             playsInline
             controls
-            preload="metadata"
+            preload="none"
           >
             Your browser does not support the video tag.
           </VideoElement>
